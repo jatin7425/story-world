@@ -1,12 +1,31 @@
 import { useState } from "react";
-import { api } from "../api";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { api, type Gender } from "../api";
+import { useAuth } from "../AuthContext";
+
+type Mode = "magic" | "password-login" | "password-signup";
 
 export default function Login() {
+  const { refresh } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const [mode, setMode] = useState<Mode>(searchParams.get("mode") === "signup" ? "password-signup" : "magic");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [gender, setGender] = useState<Gender | "">("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const submit = async (e: React.FormEvent) => {
+  const afterLogin = async () => {
+    await refresh();
+    navigate("/");
+  };
+
+  const submitMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     try {
@@ -14,6 +33,40 @@ export default function Login() {
       setSent(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
+    }
+  };
+
+  const submitPasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      await api.login(email, password);
+      await afterLogin();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const submitSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      await api.signup({
+        email,
+        password,
+        username: username || undefined,
+        mobile: mobile || undefined,
+        gender: gender || undefined,
+      });
+      await afterLogin();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -28,17 +81,140 @@ export default function Login() {
 
   return (
     <div className="login-page">
-      <h1>Log in</h1>
-      <form onSubmit={submit}>
-        <input
-          type="email"
-          required
-          placeholder="you@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <button type="submit">Send login link</button>
-      </form>
+      <h1>{mode === "password-signup" ? "Create your account" : "Log in"}</h1>
+
+      <div className="auth-tabs">
+        <button
+          type="button"
+          className={mode === "magic" ? "" : "btn-secondary"}
+          onClick={() => {
+            setMode("magic");
+            setError(null);
+          }}
+        >
+          Magic link
+        </button>
+        <button
+          type="button"
+          className={mode === "password-login" ? "" : "btn-secondary"}
+          onClick={() => {
+            setMode("password-login");
+            setError(null);
+          }}
+        >
+          Password
+        </button>
+      </div>
+
+      {mode === "magic" && (
+        <form onSubmit={submitMagicLink}>
+          <input
+            type="email"
+            required
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <button type="submit">Send login link</button>
+        </form>
+      )}
+
+      {mode === "password-login" && (
+        <>
+          <form onSubmit={submitPasswordLogin}>
+            <input
+              type="email"
+              required
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <input
+              type="password"
+              required
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button type="submit" disabled={submitting}>
+              Log in
+            </button>
+          </form>
+          <p>
+            No account yet?{" "}
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => {
+                setMode("password-signup");
+                setError(null);
+              }}
+            >
+              Create one
+            </button>
+          </p>
+        </>
+      )}
+
+      {mode === "password-signup" && (
+        <>
+          <form onSubmit={submitSignup}>
+            <input
+              type="email"
+              required
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <input
+              type="password"
+              required
+              minLength={8}
+              placeholder="Password (min. 8 characters)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <input
+              type="text"
+              placeholder="Username (optional)"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+            <input
+              type="tel"
+              placeholder="Mobile number (optional)"
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value)}
+            />
+            <label>
+              Gender (optional — picks your avatar)
+              <select value={gender} onChange={(e) => setGender(e.target.value as Gender | "")}>
+                <option value="">Prefer not to say</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            <button type="submit" disabled={submitting}>
+              Create account
+            </button>
+          </form>
+          <p>
+            Already have an account?{" "}
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => {
+                setMode("password-login");
+                setError(null);
+              }}
+            >
+              Log in
+            </button>
+          </p>
+        </>
+      )}
+
       {error && <p className="error">{error}</p>}
     </div>
   );

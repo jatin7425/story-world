@@ -1,19 +1,19 @@
-# Story Worlds
+# StoryGlobal
 
 React + Hono API + D1, all deployed as a single Cloudflare Worker. Readers browse and
-read stories; an admin adds stories/chapters manually; a daily cron job generates the
-next chapter for stories flagged as AI-generated.
+read stories; an admin adds stories/chapters manually; an MCP endpoint lets any
+MCP-capable AI (Claude, ChatGPT, Grok, etc.) write stories/chapters too — always as
+drafts an admin must manually publish, never live automatically.
 
 ## Stack
 
 - **Frontend**: React (Vite), served as static assets by the Worker.
 - **API**: [Hono](https://hono.dev), routes under `src/worker/routes/`.
-- **Database**: Cloudflare D1 (SQLite) — schema in `migrations/0001_init.sql`.
-- **Auth**: Passwordless magic-link email (via [Resend](https://resend.com)), session
-  cookie stored in D1.
-- **AI**: Cloudflare Workers AI by default (`src/worker/lib/ai.ts`); can switch to a
-  LiteLLM/OpenAI-compatible endpoint via `AI_PROVIDER=litellm`.
-- **Cron**: Cloudflare Cron Trigger, runs `runDailyChapterGeneration` once a day.
+- **Database**: Cloudflare D1 (SQLite) — schema in `migrations/`.
+- **Auth**: Passwordless magic-link email (via [Resend](https://resend.com)) or
+  email+password, session cookie stored in D1.
+- **AI content**: via the MCP endpoint (`src/worker/routes/mcp.ts`) — bearer-token
+  auth, tokens generated from `/@dm!n/mcp`. See that admin page for full docs.
 
 ## ⚠️ Windows: rename this folder before relying on `wrangler`/`npx`
 
@@ -83,6 +83,6 @@ npx wrangler secret put SESSION_SECRET
 - `stories.free_chapter_count` is the paywall gate: chapters at or below that number
   are readable without login; the rest return 401 with `locked: true` until the
   reader logs in. This is the seam to extend for a future paid tier.
-- Workers AI needs no API key (billed to your Cloudflare account). To use LiteLLM or
-  another OpenAI-compatible provider instead, set `AI_PROVIDER=litellm` plus the
-  `LITELLM_*` vars — see `.dev.vars.example`.
+- The MCP endpoint (`/mcp`) is a stateless Streamable HTTP JSON-RPC server, bearer-token
+  authenticated. Generate/revoke tokens and read full tool docs at `/@dm!n/mcp` (the
+  admin panel, at the obscure path — see that file's own note on why).

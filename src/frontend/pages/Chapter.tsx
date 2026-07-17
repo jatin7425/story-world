@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, ApiError, type Chapter as ChapterType, type Comment } from "../api";
 import { useAuth } from "../AuthContext";
+import Breadcrumbs from "../Breadcrumbs";
+import { renderChapterContent } from "../markdown";
 
 export default function Chapter() {
   const { slug, number } = useParams<{ slug: string; number: string }>();
@@ -12,23 +14,33 @@ export default function Chapter() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [locked, setLocked] = useState(false);
+  const [notFound, setNotFound] = useState(false);
+  const [nextChapterNumber, setNextChapterNumber] = useState<number | null>(null);
+  const [storyTitle, setStoryTitle] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!slug || !number) return;
     setLoading(true);
     setLocked(false);
+    setNotFound(false);
+    setChapter(null);
+    setComments([]);
     api
       .getChapter(slug, Number(number))
       .then((r) => {
         setChapter(r.chapter);
         setLikeCount(r.likeCount);
         setLikedByMe(r.likedByMe);
+        setNextChapterNumber(r.nextChapterNumber);
+        setStoryTitle(r.storyTitle);
         return api.getComments(r.chapter.id);
       })
       .then((r) => setComments(r.comments))
       .catch((err) => {
         if (err instanceof ApiError && err.locked) setLocked(true);
+        else if (err instanceof ApiError && err.status === 404) setNotFound(true);
         else throw err;
       })
       .finally(() => setLoading(false));
@@ -36,48 +48,66 @@ export default function Chapter() {
 
   const toggleLike = async () => {
     if (!chapter) return;
-    if (likedByMe) {
-      await api.unlike(chapter.id);
-      setLikeCount((c) => c - 1);
-    } else {
-      await api.like(chapter.id);
-      setLikeCount((c) => c + 1);
+    setActionError(null);
+    try {
+      if (likedByMe) {
+        await api.unlike(chapter.id);
+        setLikeCount((c) => c - 1);
+      } else {
+        await api.like(chapter.id);
+        setLikeCount((c) => c + 1);
+      }
+      setLikedByMe(!likedByMe);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Something went wrong");
     }
-    setLikedByMe(!likedByMe);
   };
 
   const submitComment = async () => {
     if (!chapter || !newComment.trim()) return;
-    const { comment } = await api.postComment(chapter.id, newComment);
-    setComments((c) => [...c, comment as Comment]);
-    setNewComment("");
+    setActionError(null);
+    try {
+      const { comment } = await api.postComment(chapter.id, newComment);
+      setComments((c) => [...c, comment as Comment]);
+      setNewComment("");
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Something went wrong");
+    }
   };
 
   if (loading) return <p>Loading...</p>;
 
   if (locked) {
     return (
-      <div className="chapter-locked">
-        <h2>Login required</h2>
-        <p>This chapter is beyond the free preview. Log in to keep reading.</p>
-        <Link to="/login">Log in</Link>
+      <div className="paywall-card">
+        <div className="icon">🔒</div>
+        <h2>Login required to keep reading</h2>
+        <p>This chapter is beyond the free preview. Log in with a magic link — no password needed.</p>
+        <Link to="/login" className="btn">
+          Log in to continue
+        </Link>
       </div>
     );
   }
 
-  if (!chapter) return <p>Chapter not found.</p>;
+  if (notFound || !chapter) return <p>Chapter not found.</p>;
+
+  const prevNumber = chapter.chapter_number > 1 ? chapter.chapter_number - 1 : null;
 
   return (
     <div className="chapter-page">
+      <Breadcrumbs
+        items={[
+          { label: "Home", to: "/" },
+          { label: storyTitle ?? slug ?? "Story", to: `/stories/${slug}` },
+          { label: `Chapter ${chapter.chapter_number}` },
+        ]}
+      />
       <h1>
         Chapter {chapter.chapter_number}
         {chapter.title ? `: ${chapter.title}` : ""}
       </h1>
-      <div className="chapter-content">
-        {chapter.content.split("\n").map((para, i) => (
-          <p key={i}>{para}</p>
-        ))}
-      </div>
+      <div className="chapter-content">{renderChapterContent(chapter.content)}</div>
 
       <div className="chapter-actions">
         {user ? (
@@ -88,6 +118,25 @@ export default function Chapter() {
           <span>♡ {likeCount}</span>
         )}
       </div>
+
+      {actionError && <p className="error">{actionError}</p>}
+
+      {(prevNumber || nextChapterNumber) && (
+        <div className="chapter-nav">
+          {prevNumber ? (
+            <Link to={`/stories/${slug}/chapters/${prevNumber}`} className="btn btn-secondary">
+              ← Previous
+            </Link>
+          ) : (
+            <span />
+          )}
+          {nextChapterNumber && (
+            <Link to={`/stories/${slug}/chapters/${nextChapterNumber}`} className="btn btn-secondary">
+              Next →
+            </Link>
+          )}
+        </div>
+      )}
 
       <section className="comments">
         <h2>Comments</h2>

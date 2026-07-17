@@ -1,11 +1,49 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, type Story, type Comment, type User } from "../api";
+import { api, type Story, type Comment, type User, type Gender } from "../api";
+import { useAuth } from "../AuthContext";
+
+type ProfileData = { user: User; followedStories: Story[]; recentComments: Comment[] };
+
+function GenderSelector({ user, onUpdated }: { user: User; onUpdated: (user: User) => void }) {
+  const { refresh } = useAuth();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    const gender = (value || null) as Gender | null;
+    setSaving(true);
+    setError(null);
+    try {
+      const { user: updated } = await api.updateGender(gender);
+      onUpdated(updated);
+      await refresh(); // keeps the header avatar in sync
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="gender-selector">
+      <label>
+        Gender (changes your avatar)
+        <select value={user.gender ?? ""} onChange={handleChange} disabled={saving}>
+          <option value="">Not set</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+      {error && <p className="error">{error}</p>}
+    </div>
+  );
+}
 
 export default function Profile() {
-  const [data, setData] = useState<{ user: User; followedStories: Story[]; recentComments: Comment[] } | null>(
-    null
-  );
+  const [data, setData] = useState<ProfileData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -20,7 +58,13 @@ export default function Profile() {
 
   return (
     <div className="profile-page">
-      <h1>{data.user.display_name ?? data.user.email}</h1>
+      <div className="profile-header">
+        <img src={data.user.avatar_url} alt="" className="profile-avatar" />
+        <div>
+          <h1>{data.user.display_name ?? data.user.email}</h1>
+          <GenderSelector user={data.user} onUpdated={(user) => setData((d) => d && { ...d, user })} />
+        </div>
+      </div>
 
       <h2>Following</h2>
       {data.followedStories.length === 0 ? (

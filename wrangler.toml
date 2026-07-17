@@ -1,7 +1,11 @@
-name = "story-worlds"
+name = "storyglobal"
 main = "src/worker/index.ts"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
+
+[assets]
+binding = "ASSETS"
+not_found_handling = "single-page-application"
 
 [[d1_databases]]
 binding = "DB"
@@ -9,22 +13,10 @@ database_name = "story_worlds_db"
 database_id = "0649d910-55c8-4afe-8d8d-91d7429bb5b9"
 migrations_dir = "migrations"
 
-[ai]
-binding = "AI"
-
-# Daily chapter-generation cron. "0 3 * * *" = 03:00 UTC every day; adjust as you like.
-[triggers]
-crons = ["0 3 * * *"]
-
 # Secrets (set via `wrangler secret put <NAME>`, do not put real values here):
 #   RESEND_API_KEY   - for sending magic-link emails
 #   SESSION_SECRET   - random string used to sign session tokens
 #
-# Workers AI (binding "AI" above) is the default chapter-generation provider
-# and needs no separate API key — billed to your Cloudflare account directly.
-#
-# To use LiteLLM (or any OpenAI-compatible endpoint) instead, set:
-#   AI_PROVIDER = "litellm"          (as a var, or `wrangler secret put AI_PROVIDER`)
-#   LITELLM_BASE_URL                 - e.g. https://your-litellm-proxy.example.com
-#   LITELLM_API_KEY                  - secret
-#   LITELLM_MODEL                    - optional, defaults to "gpt-4o-mini"
+# AI-authored content comes in via the MCP endpoint (see /@dm!n/mcp for docs
+# and token management) rather than a built-in provider — connect Claude,
+# ChatGPT, or any MCP-capable client with a generated token.

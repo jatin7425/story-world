@@ -3,7 +3,38 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Story Worlds</title>
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("storyglobal-theme");
+          var theme =
+            stored === "light" || stored === "dark"
+              ? stored
+              : window.matchMedia("(prefers-color-scheme: light)").matches
+                ? "light"
+                : "dark";
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch (e) {}
+      })();
+    </script>
+    <title>StoryGlobal — Read Web Serials Free</title>
+    <meta
+      name="description"
+      content="Browse ongoing web serials and dive in — the first few chapters of every story are free to read, no account needed."
+    />
+    <meta property="og:site_name" content="StoryGlobal" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="StoryGlobal — Read Web Serials Free" />
+    <meta
+      property="og:description"
+      content="Browse ongoing web serials and dive in — the first few chapters of every story are free to read, no account needed."
+    />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="StoryGlobal — Read Web Serials Free" />
+    <meta
+      name="twitter:description"
+      content="Browse ongoing web serials and dive in — the first few chapters of every story are free to read, no account needed."
+    />
   </head>
   <body>
     <div id="root"></div>

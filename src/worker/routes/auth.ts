@@ -1,28 +1,16 @@
 import { Hono } from "hono";
-import type { Env } from "../types";
-import {
-  createMagicLinkToken,
-  consumeMagicLinkToken,
-  findOrCreateUser,
-  createSession,
-  setSessionCookie,
-  clearSessionCookie,
-  getCurrentUser,
-} from "../lib/auth";
-import { sendMagicLinkEmail } from "../lib/email";
+import type { AppEnv } from "../hono-env";
+import { setSessionCookie, clearSessionCookie } from "../lib/session-cookie";
+import { getCurrentUser } from "../lib/current-user";
 
-export const authRoutes = new Hono<{ Bindings: Env }>();
+export const authRoutes = new Hono<AppEnv>();
 
 authRoutes.post("/request-link", async (c) => {
   const { email } = await c.req.json<{ email?: string }>();
-  if (!email || !email.includes("@")) {
-    return c.json({ error: "Valid email required" }, 400);
-  }
+  if (!email || !email.includes("@")) return c.json({ error: "Valid email required" }, 400);
 
-  const token = await createMagicLinkToken(c.env.DB, email.toLowerCase().trim());
   const appUrl = new URL(c.req.url).origin;
-  await sendMagicLinkEmail(c.env, appUrl, email, token);
-
+  await c.get("services").authService.requestMagicLink(email.toLowerCase().trim(), appUrl);
   return c.json({ ok: true });
 });
 
@@ -30,14 +18,46 @@ authRoutes.get("/verify", async (c) => {
   const token = c.req.query("token");
   if (!token) return c.json({ error: "Missing token" }, 400);
 
-  const email = await consumeMagicLinkToken(c.env.DB, token);
-  if (!email) return c.json({ error: "Invalid or expired link" }, 400);
+  const sessionToken = await c.get("services").authService.verifyMagicLink(token);
+  if (!sessionToken) return c.json({ error: "Invalid or expired link" }, 400);
 
-  const user = await findOrCreateUser(c.env.DB, email);
-  const sessionToken = await createSession(c.env.DB, user.id);
   setSessionCookie(c, sessionToken);
-
   return c.redirect("/");
+});
+
+authRoutes.post("/signup", async (c) => {
+  const body = await c.req.json<{
+    email?: string;
+    password?: string;
+    username?: string;
+    mobile?: string;
+    gender?: string;
+  }>();
+  const email = body.email?.toLowerCase().trim();
+  if (!email || !email.includes("@")) return c.json({ error: "Valid email required" }, 400);
+
+  const result = await c.get("services").authService.signup({
+    email,
+    password: body.password ?? "",
+    username: body.username?.trim() || null,
+    mobile: body.mobile?.trim() || null,
+    gender: body.gender || null,
+  });
+  if ("error" in result) return c.json({ error: result.error }, result.status);
+
+  setSessionCookie(c, result.sessionToken);
+  return c.json({ user: result.user });
+});
+
+authRoutes.post("/login", async (c) => {
+  const { email, password } = await c.req.json<{ email?: string; password?: string }>();
+  if (!email || !password) return c.json({ error: "Email and password required" }, 400);
+
+  const result = await c.get("services").authService.login(email.toLowerCase().trim(), password);
+  if ("error" in result) return c.json({ error: result.error }, result.status);
+
+  setSessionCookie(c, result.sessionToken);
+  return c.json({ user: result.user });
 });
 
 authRoutes.post("/logout", async (c) => {

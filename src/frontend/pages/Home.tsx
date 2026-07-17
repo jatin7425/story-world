@@ -5,26 +5,80 @@ import { api, type Story } from "../api";
 export default function Home() {
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
-    api
-      .listStories()
-      .then((r) => setStories(r.stories))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <p>Loading stories...</p>;
-  if (stories.length === 0) return <p>No stories yet — check back soon.</p>;
+    setLoading(true);
+    const handle = setTimeout(() => {
+      api
+        .listStories(query.trim() || undefined)
+        .then((r) => setStories(r.stories))
+        .finally(() => setLoading(false));
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [query]);
 
   return (
-    <div className="story-grid">
-      {stories.map((s) => (
-        <Link key={s.id} to={`/stories/${s.slug}`} className="story-card">
-          {s.cover_image_url && <img src={s.cover_image_url} alt="" />}
-          <h3>{s.title}</h3>
-          {s.description && <p>{s.description}</p>}
-        </Link>
-      ))}
-    </div>
+    <>
+      <div className="hero">
+        <h1>Worlds worth losing yourself in</h1>
+        <p>Browse ongoing web serials — the first few chapters of every story are free, no account needed.</p>
+      </div>
+
+      <div className="search-bar">
+        <input
+          type="search"
+          placeholder="Search by title, description, or tag…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search stories"
+        />
+      </div>
+
+      <h2 className="section-heading">{query.trim() ? `Results for "${query.trim()}"` : "All stories"}</h2>
+
+      {loading ? (
+        <p>Loading stories...</p>
+      ) : stories.length === 0 ? (
+        <p className="empty-state">
+          {query.trim() ? "No stories match your search." : "No stories yet — check back soon."}
+        </p>
+      ) : (
+        <div className="story-grid">
+          {stories.map((s) => (
+            <Link key={s.id} to={`/stories/${s.slug}`} className="story-card">
+              <div className="cover">
+                {s.cover_image_url ? (
+                  <img src={s.cover_image_url} alt="" />
+                ) : (
+                  <div className="cover-placeholder">{s.title}</div>
+                )}
+                {s.free_chapter_count > 0 && (
+                  <span className="free-badge">{s.free_chapter_count} free</span>
+                )}
+              </div>
+              <div className="card-body">
+                <h3>{s.title}</h3>
+                {s.description && <p>{s.description}</p>}
+                {s.tags && (
+                  <div className="tag-row">
+                    {s.tags
+                      .split(",")
+                      .map((t) => t.trim())
+                      .filter(Boolean)
+                      .slice(0, 4)
+                      .map((t) => (
+                        <span key={t} className="tag-chip">
+                          {t}
+                        </span>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, type ChapterSummary, type Story as StoryType } from "../api";
 import { useAuth } from "../AuthContext";
+import Breadcrumbs from "../Breadcrumbs";
 
 export default function Story() {
   const { slug } = useParams<{ slug: string }>();
@@ -45,29 +46,47 @@ export default function Story() {
 
   return (
     <div className="story-page">
-      <h1>{story.title}</h1>
-      {story.description && <p className="description">{story.description}</p>}
-      <p className="meta">{followersCount} following</p>
+      <Breadcrumbs items={[{ label: "Home", to: "/" }, { label: story.title }]} />
 
-      {user ? (
-        <button onClick={toggleFollow}>{isFollowing ? "Unfollow" : "Follow"}</button>
-      ) : (
-        <p>
-          <Link to="/login">Log in</Link> to follow this story.
-        </p>
-      )}
+      <div className="story-banner">
+        {story.cover_image_url && (
+          <div className="cover">
+            <img src={story.cover_image_url} alt="" />
+          </div>
+        )}
+        <div>
+          <h1>{story.title}</h1>
+          {story.description && <p className="description">{story.description}</p>}
+          <p className="meta">
+            {followersCount} following · {chapters.length} chapter{chapters.length === 1 ? "" : "s"}
+          </p>
+          <div className="story-actions">
+            {user ? (
+              <button className={isFollowing ? "btn-secondary" : ""} onClick={toggleFollow}>
+                {isFollowing ? "Following ✓" : "+ Follow"}
+              </button>
+            ) : (
+              <Link to="/login" className="btn btn-secondary">
+                Log in to follow
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
 
-      <h2>Chapters</h2>
+      <h2 className="section-heading">Chapters</h2>
       <ol className="chapter-list">
         {chapters.map((ch) => {
           const isFree = ch.chapter_number <= story.free_chapter_count;
           return (
             <li key={ch.id}>
               <Link to={`/stories/${story.slug}/chapters/${ch.chapter_number}`}>
-                Chapter {ch.chapter_number}
-                {ch.title ? `: ${ch.title}` : ""}
+                <span>
+                  Chapter {ch.chapter_number}
+                  {ch.title ? `: ${ch.title}` : ""}
+                </span>
+                {!isFree && !user && <span className="locked-badge">🔒 Login required</span>}
               </Link>
-              {!isFree && !user && <span className="locked-badge"> 🔒 Login required</span>}
             </li>
           );
         })}

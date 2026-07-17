@@ -16,9 +16,9 @@ export async function sendMagicLinkEmail(env: Env, appUrl: string, email: string
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "Story Worlds <onboarding@resend.com>",
+      from: "StoryGlobal <onboarding@resend.com>",
       to: email,
-      subject: "Your Story Worlds login link",
+      subject: "Your StoryGlobal login link",
       html: `<p>Click below to log in. This link expires in 15 minutes.</p><p><a href="${link}">${link}</a></p>`,
     }),
   });
