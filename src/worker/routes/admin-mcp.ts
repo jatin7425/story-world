@@ -2,13 +2,15 @@ import { Hono } from "hono";
 import type { AppEnv } from "../hono-env";
 import { adminGuard } from "../lib/admin-guard";
 import { getCurrentUser } from "../lib/current-user";
+import { parseAdminPagination } from "../lib/pagination";
 
 export const adminMcpRoutes = new Hono<AppEnv>();
 adminMcpRoutes.use("*", adminGuard);
 
 adminMcpRoutes.get("/tokens", async (c) => {
-  const tokens = await c.get("services").mcpTokenService.list();
-  return c.json({ tokens });
+  const { page, limit } = parseAdminPagination(c);
+  const { items, total, totalPages } = await c.get("services").mcpTokenService.list(page, limit);
+  return c.json({ tokens: items, total, page, limit, totalPages });
 });
 
 adminMcpRoutes.post("/tokens", async (c) => {

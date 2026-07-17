@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, type Gender } from "../api";
 import { useAuth } from "../AuthContext";
+import PasswordInput from "../PasswordInput";
 
 type Mode = "magic" | "password-login" | "password-signup";
 
@@ -129,8 +130,7 @@ export default function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            <input
-              type="password"
+            <PasswordInput
               required
               placeholder="Password"
               value={password}
@@ -166,8 +166,7 @@ export default function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            <input
-              type="password"
+            <PasswordInput
               required
               minLength={8}
               placeholder="Password (min. 8 characters)"

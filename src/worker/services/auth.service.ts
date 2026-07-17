@@ -110,6 +110,22 @@ export class AuthService {
     return { user: toAuthUser(user), sessionToken };
   }
 
+  async changePassword(
+    userId: number,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<{ ok: true } | { error: string; status: 400 | 401 }> {
+    if (newPassword.length < 8) return { error: "New password must be at least 8 characters", status: 400 };
+
+    const user = await this.users.findById(userId);
+    if (!user || !user.password_hash || !(await verifyPassword(currentPassword, user.password_hash))) {
+      return { error: "Current password is incorrect", status: 401 };
+    }
+
+    await this.users.updatePassword(userId, await hashPassword(newPassword));
+    return { ok: true };
+  }
+
   getCurrentUser(sessionToken: string | null): Promise<AuthUser | null> {
     if (!sessionToken) return Promise.resolve(null);
     return this.sessions.findActiveUserByToken(sessionToken);

@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { api, type AdminChapter } from "../api";
 import { ADMIN_PATH } from "../adminPath";
 import MarkdownEditor from "./MarkdownEditor";
+import RichTextEditor from "./RichTextEditor";
 import { renderChapterContent } from "../markdown";
 
 export default function AdminChapterReview() {
@@ -37,12 +38,14 @@ export default function AdminChapterReview() {
   }, [storyId, chapterNumber]);
 
   const save = async () => {
+    if (!chapter) return;
     setSaving(true);
     setStatus(null);
     try {
       const { chapter: updated } = await api.updateChapterContent(storyId, chapterNumber, {
         title: title || null,
         content,
+        content_format: chapter.content_format,
         image_url: imageUrl || null,
       });
       setChapter(updated);
@@ -114,13 +117,17 @@ export default function AdminChapterReview() {
 
         <div className="admin-editor-header">
           <h2>Content</h2>
-          <button type="button" className="admin-btn-ghost" onClick={() => setShowPreview((p) => !p)}>
-            {showPreview ? "Edit" : "Preview"}
-          </button>
+          {chapter.content_format === "markdown" && (
+            <button type="button" className="admin-btn-ghost" onClick={() => setShowPreview((p) => !p)}>
+              {showPreview ? "Edit" : "Preview"}
+            </button>
+          )}
         </div>
 
-        {showPreview ? (
-          <div className="admin-preview chapter-content">{renderChapterContent(content)}</div>
+        {chapter.content_format === "html" ? (
+          <RichTextEditor value={content} onChange={setContent} />
+        ) : showPreview ? (
+          <div className="admin-preview chapter-content">{renderChapterContent(content, "markdown")}</div>
         ) : (
           <MarkdownEditor value={content} onChange={setContent} rows={20} />
         )}

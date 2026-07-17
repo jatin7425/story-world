@@ -15,6 +15,7 @@ export interface StoryRow {
 }
 
 export type ChapterStatus = "draft" | "published";
+export type ChapterContentFormat = "markdown" | "html";
 
 export interface ChapterRow {
   id: number;
@@ -22,6 +23,7 @@ export interface ChapterRow {
   chapter_number: number;
   title: string | null;
   content: string;
+  content_format: ChapterContentFormat;
   generated_by: string;
   status: ChapterStatus;
   image_url: string | null;
@@ -76,4 +78,5 @@ export interface UserRow {
   gender: "male" | "female" | "other" | null;
   avatar_gender: "male" | "female";
   avatar_seed: number;
+  created_at: string;
 }

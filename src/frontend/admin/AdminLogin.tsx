@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../AuthContext";
 import { api } from "../api";
+import PasswordInput from "../PasswordInput";
 
 export default function AdminLogin() {
   const { refresh } = useAuth();
@@ -36,8 +37,7 @@ export default function AdminLogin() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <input
-            type="password"
+          <PasswordInput
             required
             placeholder="Password"
             value={password}

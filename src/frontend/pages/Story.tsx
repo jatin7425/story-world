@@ -3,12 +3,16 @@ import { Link, useParams } from "react-router-dom";
 import { api, type ChapterSummary, type Story as StoryType } from "../api";
 import { useAuth } from "../AuthContext";
 import Breadcrumbs from "../Breadcrumbs";
+import Pagination from "../Pagination";
 
 export default function Story() {
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
   const [story, setStory] = useState<StoryType | null>(null);
   const [chapters, setChapters] = useState<ChapterSummary[]>([]);
+  const [chapterPage, setChapterPage] = useState(1);
+  const [chapterTotalPages, setChapterTotalPages] = useState(1);
+  const [chaptersTotal, setChaptersTotal] = useState(0);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -17,17 +21,20 @@ export default function Story() {
     if (!slug) return;
     setLoading(true);
     api
-      .getStory(slug)
+      .getStory(slug, chapterPage)
       .then((r) => {
         setStory(r.story);
         setChapters(r.chapters);
+        setChapterTotalPages(r.chaptersTotalPages);
+        setChaptersTotal(r.chaptersTotal);
         setIsFollowing(r.isFollowing);
         setFollowersCount(r.followersCount);
       })
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, [slug]);
+  useEffect(() => setChapterPage(1), [slug]);
+  useEffect(load, [slug, chapterPage]);
 
   const toggleFollow = async () => {
     if (!slug) return;
@@ -58,7 +65,7 @@ export default function Story() {
           <h1>{story.title}</h1>
           {story.description && <p className="description">{story.description}</p>}
           <p className="meta">
-            {followersCount} following · {chapters.length} chapter{chapters.length === 1 ? "" : "s"}
+            {followersCount} following · {chaptersTotal} chapter{chaptersTotal === 1 ? "" : "s"}
           </p>
           <div className="story-actions">
             {user ? (
@@ -91,6 +98,8 @@ export default function Story() {
           );
         })}
       </ol>
+
+      <Pagination page={chapterPage} totalPages={chapterTotalPages} onChange={setChapterPage} />
     </div>
   );
 }

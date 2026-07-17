@@ -2,8 +2,16 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Story, type Comment, type User, type Gender } from "../api";
 import { useAuth } from "../AuthContext";
+import PasswordInput from "../PasswordInput";
+import Pagination from "../Pagination";
 
-type ProfileData = { user: User; followedStories: Story[]; recentComments: Comment[] };
+type ProfileData = {
+  user: User;
+  followedStories: Story[];
+  followedTotalPages: number;
+  recentComments: Comment[];
+  commentsTotalPages: number;
+};
 
 function GenderSelector({ user, onUpdated }: { user: User; onUpdated: (user: User) => void }) {
   const { refresh } = useAuth();
@@ -42,16 +50,66 @@ function GenderSelector({ user, onUpdated }: { user: User; onUpdated: (user: Use
   );
 }
 
+function ChangePasswordForm() {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(false);
+    setSaving(true);
+    try {
+      await api.changePassword(currentPassword, newPassword);
+      setCurrentPassword("");
+      setNewPassword("");
+      setSuccess(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to change password");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="change-password-form">
+      <PasswordInput
+        required
+        placeholder="Current password"
+        value={currentPassword}
+        onChange={(e) => setCurrentPassword(e.target.value)}
+      />
+      <PasswordInput
+        required
+        minLength={8}
+        placeholder="New password (min. 8 characters)"
+        value={newPassword}
+        onChange={(e) => setNewPassword(e.target.value)}
+      />
+      <button type="submit" disabled={saving}>
+        {saving ? "Saving…" : "Change password"}
+      </button>
+      {success && <p className="status">Password changed.</p>}
+      {error && <p className="error">{error}</p>}
+    </form>
+  );
+}
+
 export default function Profile() {
   const [data, setData] = useState<ProfileData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [followedPage, setFollowedPage] = useState(1);
+  const [commentsPage, setCommentsPage] = useState(1);
 
   useEffect(() => {
     api
-      .getProfile()
+      .getProfile(followedPage, commentsPage)
       .then(setData)
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load profile"));
-  }, []);
+  }, [followedPage, commentsPage]);
 
   if (error) return <p>{error}</p>;
   if (!data) return <p>Loading...</p>;
@@ -66,28 +124,37 @@ export default function Profile() {
         </div>
       </div>
 
+      <h2>Change password</h2>
+      <ChangePasswordForm />
+
       <h2>Following</h2>
       {data.followedStories.length === 0 ? (
         <p>Not following any stories yet.</p>
       ) : (
-        <ul>
-          {data.followedStories.map((s) => (
-            <li key={s.id}>
-              <Link to={`/stories/${s.slug}`}>{s.title}</Link>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul>
+            {data.followedStories.map((s) => (
+              <li key={s.id}>
+                <Link to={`/stories/${s.slug}`}>{s.title}</Link>
+              </li>
+            ))}
+          </ul>
+          <Pagination page={followedPage} totalPages={data.followedTotalPages} onChange={setFollowedPage} />
+        </>
       )}
 
       <h2>Recent comments</h2>
       {data.recentComments.length === 0 ? (
         <p>No comments yet.</p>
       ) : (
-        <ul>
-          {data.recentComments.map((c) => (
-            <li key={c.id}>{c.body}</li>
-          ))}
-        </ul>
+        <>
+          <ul>
+            {data.recentComments.map((c) => (
+              <li key={c.id}>{c.body}</li>
+            ))}
+          </ul>
+          <Pagination page={commentsPage} totalPages={data.commentsTotalPages} onChange={setCommentsPage} />
+        </>
       )}
     </div>
   );

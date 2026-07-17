@@ -1,6 +1,7 @@
 import type { IMcpTokensRepository } from "../repositories/mcp-tokens.repository";
 import type { McpTokenRow } from "../repositories/types";
 import { randomHex, sha256Hex } from "../lib/hash";
+import { toPaginated, type Paginated } from "../lib/pagination";
 
 export interface McpTokenView {
   id: number;
@@ -25,9 +26,9 @@ export class McpTokenService {
     return { token: raw, record: toView(record) };
   }
 
-  async list(): Promise<McpTokenView[]> {
-    const rows = await this.tokens.listActive();
-    return rows.map(toView);
+  async list(page: number, limit: number): Promise<Paginated<McpTokenView>> {
+    const { items, total } = await this.tokens.listActive(limit, (page - 1) * limit);
+    return toPaginated(items.map(toView), total, page, limit);
   }
 
   revoke(id: number): Promise<void> {

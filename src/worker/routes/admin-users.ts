@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { AppEnv } from "../hono-env";
 import { adminGuard } from "../lib/admin-guard";
 import type { RestrictionType } from "../repositories/restrictions.repository";
+import { parseAdminPagination } from "../lib/pagination";
 
 export const adminUsersRoutes = new Hono<AppEnv>();
 adminUsersRoutes.use("*", adminGuard);
@@ -13,8 +14,9 @@ function parseRestriction(value: string): RestrictionType | null {
 }
 
 adminUsersRoutes.get("/users", async (c) => {
-  const users = await c.get("services").adminUserService.listUsers();
-  return c.json({ users });
+  const { page, limit } = parseAdminPagination(c);
+  const { items, total, totalPages } = await c.get("services").adminUserService.listUsers(page, limit);
+  return c.json({ users: items, total, page, limit, totalPages });
 });
 
 adminUsersRoutes.post("/users/:id/ban", async (c) => {

@@ -23,9 +23,14 @@ export interface UpdateStoryInput {
   tags?: string | null;
 }
 
+export interface StoryPage {
+  items: StoryRow[];
+  total: number;
+}
+
 export interface IStoriesRepository {
-  listPublished(): Promise<StoryRow[]>;
-  listAllForAdmin(): Promise<StoryRow[]>;
+  listPublished(limit: number, offset: number): Promise<StoryPage>;
+  listAllForAdmin(limit: number, offset: number): Promise<StoryPage>;
   findPublishedBySlug(slug: string): Promise<StoryRow | null>;
   /** No status filter — admin/MCP use, where drafts must still be reachable. */
   findBySlug(slug: string): Promise<StoryRow | null>;
@@ -34,24 +39,32 @@ export interface IStoriesRepository {
   update(id: number, patch: UpdateStoryInput): Promise<StoryRow | null>;
   delete(id: number): Promise<void>;
   /** Word-wise match across title/description/tags — every word in the query must appear somewhere. */
-  search(words: string[]): Promise<StoryRow[]>;
+  search(words: string[], limit: number, offset: number): Promise<StoryPage>;
 }
 
 export class StoriesRepository implements IStoriesRepository {
   constructor(private readonly db: D1Database) {}
 
-  async listPublished(): Promise<StoryRow[]> {
-    const { results } = await this.db
-      .prepare(`SELECT ${STORY_COLUMNS} FROM stories WHERE status = 'published' ORDER BY created_at DESC`)
-      .all<StoryRow>();
-    return results;
+  async listPublished(limit: number, offset: number): Promise<StoryPage> {
+    const [{ results }, countRow] = await Promise.all([
+      this.db
+        .prepare(`SELECT ${STORY_COLUMNS} FROM stories WHERE status = 'published' ORDER BY created_at DESC LIMIT ? OFFSET ?`)
+        .bind(limit, offset)
+        .all<StoryRow>(),
+      this.db.prepare("SELECT COUNT(*) as count FROM stories WHERE status = 'published'").first<{ count: number }>(),
+    ]);
+    return { items: results, total: countRow?.count ?? 0 };
   }
 
-  async listAllForAdmin(): Promise<StoryRow[]> {
-    const { results } = await this.db
-      .prepare(`SELECT ${STORY_COLUMNS} FROM stories ORDER BY created_at DESC`)
-      .all<StoryRow>();
-    return results;
+  async listAllForAdmin(limit: number, offset: number): Promise<StoryPage> {
+    const [{ results }, countRow] = await Promise.all([
+      this.db
+        .prepare(`SELECT ${STORY_COLUMNS} FROM stories ORDER BY created_at DESC LIMIT ? OFFSET ?`)
+        .bind(limit, offset)
+        .all<StoryRow>(),
+      this.db.prepare("SELECT COUNT(*) as count FROM stories").first<{ count: number }>(),
+    ]);
+    return { items: results, total: countRow?.count ?? 0 };
   }
 
   async findPublishedBySlug(slug: string): Promise<StoryRow | null> {
@@ -136,8 +149,8 @@ export class StoriesRepository implements IStoriesRepository {
     await this.db.prepare("DELETE FROM stories WHERE id = ?").bind(id).run();
   }
 
-  async search(words: string[]): Promise<StoryRow[]> {
-    if (words.length === 0) return this.listPublished();
+  async search(words: string[], limit: number, offset: number): Promise<StoryPage> {
+    if (words.length === 0) return this.listPublished(limit, offset);
 
     const escapeLike = (s: string) => s.replace(/[%_\\]/g, (c) => `\\${c}`);
     const conditions = words
@@ -148,10 +161,17 @@ export class StoriesRepository implements IStoriesRepository {
       return [pattern, pattern, pattern];
     });
 
-    const { results } = await this.db
-      .prepare(`SELECT ${STORY_COLUMNS} FROM stories WHERE status = 'published' AND (${conditions}) ORDER BY created_at DESC`)
-      .bind(...values)
-      .all<StoryRow>();
-    return results;
+    const whereClause = `status = 'published' AND (${conditions})`;
+    const [{ results }, countRow] = await Promise.all([
+      this.db
+        .prepare(`SELECT ${STORY_COLUMNS} FROM stories WHERE ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
+        .bind(...values, limit, offset)
+        .all<StoryRow>(),
+      this.db
+        .prepare(`SELECT COUNT(*) as count FROM stories WHERE ${whereClause}`)
+        .bind(...values)
+        .first<{ count: number }>(),
+    ]);
+    return { items: results, total: countRow?.count ?? 0 };
   }
 }

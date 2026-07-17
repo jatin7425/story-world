@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { api, ApiError, type Chapter as ChapterType, type Comment } from "../api";
 import { useAuth } from "../AuthContext";
 import Breadcrumbs from "../Breadcrumbs";
+import Pagination from "../Pagination";
 import { renderChapterContent } from "../markdown";
 
 export default function Chapter() {
@@ -12,6 +13,8 @@ export default function Chapter() {
   const [likeCount, setLikeCount] = useState(0);
   const [likedByMe, setLikedByMe] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
+  const [commentsPage, setCommentsPage] = useState(1);
+  const [commentsTotalPages, setCommentsTotalPages] = useState(1);
   const [newComment, setNewComment] = useState("");
   const [locked, setLocked] = useState(false);
   const [notFound, setNotFound] = useState(false);
@@ -27,6 +30,7 @@ export default function Chapter() {
     setNotFound(false);
     setChapter(null);
     setComments([]);
+    setCommentsPage(1);
     api
       .getChapter(slug, Number(number))
       .then((r) => {
@@ -35,9 +39,7 @@ export default function Chapter() {
         setLikedByMe(r.likedByMe);
         setNextChapterNumber(r.nextChapterNumber);
         setStoryTitle(r.storyTitle);
-        return api.getComments(r.chapter.id);
       })
-      .then((r) => setComments(r.comments))
       .catch((err) => {
         if (err instanceof ApiError && err.locked) setLocked(true);
         else if (err instanceof ApiError && err.status === 404) setNotFound(true);
@@ -45,6 +47,14 @@ export default function Chapter() {
       })
       .finally(() => setLoading(false));
   }, [slug, number]);
+
+  useEffect(() => {
+    if (!chapter) return;
+    api.getComments(chapter.id, commentsPage).then((r) => {
+      setComments(r.comments);
+      setCommentsTotalPages(r.totalPages);
+    });
+  }, [chapter, commentsPage]);
 
   const toggleLike = async () => {
     if (!chapter) return;
@@ -107,7 +117,7 @@ export default function Chapter() {
         Chapter {chapter.chapter_number}
         {chapter.title ? `: ${chapter.title}` : ""}
       </h1>
-      <div className="chapter-content">{renderChapterContent(chapter.content)}</div>
+      <div className="chapter-content">{renderChapterContent(chapter.content, chapter.content_format)}</div>
 
       <div className="chapter-actions">
         {user ? (
@@ -146,6 +156,8 @@ export default function Chapter() {
             <p>{c.body}</p>
           </div>
         ))}
+
+        <Pagination page={commentsPage} totalPages={commentsTotalPages} onChange={setCommentsPage} />
 
         {user ? (
           <div className="comment-form">

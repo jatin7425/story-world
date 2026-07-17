@@ -48,6 +48,7 @@ export interface Story {
 
 export type ChapterStatus = "draft" | "published";
 export type ContentSource = "admin" | "mcp" | "ai";
+export type ChapterContentFormat = "markdown" | "html";
 
 export interface ChapterSummary {
   id: number;
@@ -64,6 +65,7 @@ export interface Chapter {
   chapter_number: number;
   title: string | null;
   content: string;
+  content_format: ChapterContentFormat;
   status: ChapterStatus;
   image_url: string | null;
 }
@@ -74,6 +76,7 @@ export interface AdminChapter {
   chapter_number: number;
   title: string | null;
   content: string;
+  content_format: ChapterContentFormat;
   status: ChapterStatus;
   generated_by: ContentSource;
   image_url: string | null;
@@ -95,7 +98,11 @@ export interface AdminUser {
   email: string;
   display_name: string | null;
   username: string | null;
+  mobile: string | null;
+  gender: Gender | null;
+  avatar_url: string;
   role: string;
+  created_at: string;
   restrictions: RestrictionType[];
 }
 
@@ -115,6 +122,19 @@ export interface StoryEditInput {
   tags?: string | null;
 }
 
+export interface PageMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+function qs(params: Record<string, string | number | undefined>): string {
+  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== "");
+  if (entries.length === 0) return "";
+  return "?" + entries.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`).join("&");
+}
+
 export const api = {
   me: () => request<{ user: User | null }>("/auth/me"),
   requestLink: (email: string) =>
@@ -125,16 +145,19 @@ export const api = {
   login: (email: string, password: string) =>
     request<{ user: User }>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
 
-  listStories: (query?: string) =>
-    request<{ stories: Story[] }>(`/api/stories${query ? `?q=${encodeURIComponent(query)}` : ""}`),
-  getStory: (slug: string) =>
+  listStories: (query?: string, page?: number) =>
+    request<{ stories: Story[] } & PageMeta>(`/api/stories${qs({ q: query, page })}`),
+  getStory: (slug: string, chapterPage?: number) =>
     request<{
       story: Story;
       chapters: ChapterSummary[];
+      chaptersTotal: number;
+      chaptersPage: number;
+      chaptersTotalPages: number;
       followersCount: number;
       isFollowing: boolean;
       isLoggedIn: boolean;
-    }>(`/api/stories/${slug}`),
+    }>(`/api/stories/${slug}${qs({ page: chapterPage })}`),
   follow: (slug: string) => request<{ ok: true }>(`/api/stories/${slug}/follow`, { method: "POST" }),
   unfollow: (slug: string) => request<{ ok: true }>(`/api/stories/${slug}/follow`, { method: "DELETE" }),
 
@@ -150,41 +173,65 @@ export const api = {
   unlike: (chapterId: number) =>
     request<{ ok: true }>(`/api/chapters/${chapterId}/like`, { method: "DELETE" }),
 
-  getComments: (chapterId: number) =>
-    request<{ comments: Comment[] }>(`/api/chapters/${chapterId}/comments`),
+  getComments: (chapterId: number, page?: number) =>
+    request<{ comments: Comment[] } & PageMeta>(`/api/chapters/${chapterId}/comments${qs({ page })}`),
   postComment: (chapterId: number, body: string) =>
     request<{ comment: Comment }>(`/api/chapters/${chapterId}/comments`, {
       method: "POST",
       body: JSON.stringify({ body }),
     }),
 
-  getProfile: () =>
-    request<{ user: User; followedStories: Story[]; recentComments: Comment[] }>("/api/profile"),
+  getProfile: (followedPage?: number, commentsPage?: number) =>
+    request<{
+      user: User;
+      followedStories: Story[];
+      followedTotal: number;
+      followedPage: number;
+      followedTotalPages: number;
+      recentComments: Comment[];
+      commentsTotal: number;
+      commentsPage: number;
+      commentsTotalPages: number;
+    }>(`/api/profile${qs({ followed_page: followedPage, comments_page: commentsPage })}`),
   updateGender: (gender: Gender | null) =>
     request<{ user: User }>("/api/profile/gender", { method: "PATCH", body: JSON.stringify({ gender }) }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<{ ok: true }>("/api/profile/password", {
+      method: "PATCH",
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    }),
 
   // --- Admin: stories/chapters ---
-  adminListStories: () => request<{ stories: Story[] }>("/api/admin/stories"),
+  adminListStories: (page?: number, limit?: number) =>
+    request<{ stories: Story[] } & PageMeta>(`/api/admin/stories${qs({ page, limit })}`),
   createStory: (input: { title: string; description?: string; free_chapter_count?: number; tags?: string }) =>
     request<{ story: Story }>("/api/admin/stories", { method: "POST", body: JSON.stringify(input) }),
   updateStory: (id: number, patch: StoryEditInput) =>
     request<{ story: Story }>(`/api/admin/stories/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
   deleteStory: (id: number) => request<{ ok: true }>(`/api/admin/stories/${id}`, { method: "DELETE" }),
   getAdminStory: (id: number) => request<{ story: Story }>(`/api/admin/stories/${id}`),
-  adminListChapters: (storyId: number) =>
-    request<{ chapters: ChapterSummary[] }>(`/api/admin/stories/${storyId}/chapters`),
+  adminListChapters: (storyId: number, page?: number, limit?: number) =>
+    request<{ chapters: ChapterSummary[] } & PageMeta>(`/api/admin/stories/${storyId}/chapters${qs({ page, limit })}`),
   getAdminChapter: (storyId: number, chapterNumber: number) =>
     request<{ chapter: AdminChapter }>(`/api/admin/stories/${storyId}/chapters/${chapterNumber}`),
   updateChapterContent: (
     storyId: number,
     chapterNumber: number,
-    patch: { title?: string | null; content?: string; image_url?: string | null }
+    patch: {
+      title?: string | null;
+      content?: string;
+      content_format?: ChapterContentFormat;
+      image_url?: string | null;
+    }
   ) =>
     request<{ chapter: AdminChapter }>(`/api/admin/stories/${storyId}/chapters/${chapterNumber}`, {
       method: "PATCH",
       body: JSON.stringify(patch),
     }),
-  addChapter: (storyId: number, input: { title?: string; content: string; image_url?: string }) =>
+  addChapter: (
+    storyId: number,
+    input: { title?: string; content: string; content_format?: ChapterContentFormat; image_url?: string }
+  ) =>
     request<{ chapter: ChapterSummary }>(`/api/admin/stories/${storyId}/chapters`, {
       method: "POST",
       body: JSON.stringify(input),
@@ -201,7 +248,8 @@ export const api = {
     }),
 
   // --- Admin: users ---
-  listUsers: () => request<{ users: AdminUser[] }>("/api/admin/users"),
+  listUsers: (page?: number, limit?: number) =>
+    request<{ users: AdminUser[] } & PageMeta>(`/api/admin/users${qs({ page, limit })}`),
   banUser: (id: number) => request<{ ok: true }>(`/api/admin/users/${id}/ban`, { method: "POST" }),
   unbanUser: (id: number) => request<{ ok: true }>(`/api/admin/users/${id}/ban`, { method: "DELETE" }),
   setRestriction: (id: number, type: RestrictionType, enabled: boolean) =>
@@ -210,7 +258,8 @@ export const api = {
     }),
 
   // --- Admin: MCP tokens ---
-  listMcpTokens: () => request<{ tokens: McpToken[] }>("/api/admin/mcp/tokens"),
+  listMcpTokens: (page?: number, limit?: number) =>
+    request<{ tokens: McpToken[] } & PageMeta>(`/api/admin/mcp/tokens${qs({ page, limit })}`),
   createMcpToken: (name: string) =>
     request<{ token: string; record: McpToken }>("/api/admin/mcp/tokens", {
       method: "POST",

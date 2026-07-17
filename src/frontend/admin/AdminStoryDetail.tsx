@@ -4,6 +4,7 @@ import { api, type Story } from "../api";
 import { ADMIN_PATH } from "../adminPath";
 import StoryEditForm from "./StoryEditForm";
 import StoryChapters from "./StoryChapters";
+import Modal from "./Modal";
 
 export default function AdminStoryDetail() {
   const { id } = useParams<{ id: string }>();
@@ -11,6 +12,7 @@ export default function AdminStoryDetail() {
   const [story, setStory] = useState<Story | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showEdit, setShowEdit] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -55,9 +57,35 @@ export default function AdminStoryDetail() {
       </p>
 
       <div className="admin-card">
-        <h2>Story details</h2>
-        <StoryEditForm story={story} onSaved={load} />
+        <div className="admin-header-row">
+          <h2>Story details</h2>
+          <button type="button" className="admin-btn-ghost" onClick={() => setShowEdit(true)}>
+            Edit details
+          </button>
+        </div>
+        <dl className="user-detail-fields">
+          <dt>Description</dt>
+          <dd>{story.description || <span className="admin-empty">Not set</span>}</dd>
+          <dt>Tags</dt>
+          <dd>{story.tags || <span className="admin-empty">Not set</span>}</dd>
+          <dt>Free chapters</dt>
+          <dd>{story.free_chapter_count}</dd>
+          <dt>Cover image</dt>
+          <dd>{story.cover_image_url || <span className="admin-empty">Not set</span>}</dd>
+        </dl>
       </div>
+
+      {showEdit && (
+        <Modal title="Edit story details" onClose={() => setShowEdit(false)} wide>
+          <StoryEditForm
+            story={story}
+            onSaved={() => {
+              load();
+              setShowEdit(false);
+            }}
+          />
+        </Modal>
+      )}
 
       <h2 className="admin-list-heading">Chapters</h2>
       <StoryChapters storyId={story.id} />

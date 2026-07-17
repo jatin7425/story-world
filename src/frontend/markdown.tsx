@@ -1,4 +1,16 @@
 import type { ReactNode } from "react";
+import { renderRichHtml } from "./richContent";
+import type { ChapterContentFormat } from "./api";
+
+/**
+ * Dispatches to the right parser for a chapter's stored content format.
+ * 'markdown' is the original hand-rolled syntax (still used by MCP/AI and
+ * any chapter written before the rich-text editor existed); 'html' is
+ * sanitized real HTML from the WYSIWYG editor (see richContent.tsx).
+ */
+export function renderChapterContent(content: string, format: ChapterContentFormat = "markdown"): ReactNode[] {
+  return format === "html" ? renderRichHtml(content) : renderMarkdownContent(content);
+}
 
 /**
  * Deliberately tiny, dependency-free markdown-ish renderer — supports
@@ -8,7 +20,7 @@ import type { ReactNode } from "react";
  * so there's no HTML-injection surface regardless of where the content came
  * from (admin, MCP, or — someday — a reader submission).
  */
-export function renderChapterContent(content: string): ReactNode[] {
+function renderMarkdownContent(content: string): ReactNode[] {
   const lines = content.split("\n");
   const blocks: ReactNode[] = [];
   let listItems: string[] = [];

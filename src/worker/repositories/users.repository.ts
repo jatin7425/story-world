@@ -2,7 +2,7 @@ import type { UserRow } from "./types";
 import type { AvatarGender, Gender } from "../types";
 
 const USER_COLUMNS =
-  "id, email, display_name, role, password_hash, username, mobile, gender, avatar_gender, avatar_seed";
+  "id, email, display_name, role, password_hash, username, mobile, gender, avatar_gender, avatar_seed, created_at";
 
 export interface CreatePasswordUserInput {
   email: string;
@@ -14,6 +14,11 @@ export interface CreatePasswordUserInput {
   avatarSeed: number;
 }
 
+export interface UserPage {
+  items: UserRow[];
+  total: number;
+}
+
 export interface IUsersRepository {
   findByEmail(email: string): Promise<UserRow | null>;
   findByUsername(username: string): Promise<{ id: number } | null>;
@@ -22,7 +27,8 @@ export interface IUsersRepository {
   createWithPassword(input: CreatePasswordUserInput): Promise<UserRow>;
   attachPassword(userId: number, input: CreatePasswordUserInput): Promise<UserRow>;
   updateGender(userId: number, gender: Gender | null, avatarSeed: number): Promise<UserRow>;
-  listAll(): Promise<UserRow[]>;
+  updatePassword(userId: number, passwordHash: string): Promise<UserRow>;
+  listAll(limit: number, offset: number): Promise<UserPage>;
 }
 
 export class UsersRepository implements IUsersRepository {
@@ -43,11 +49,15 @@ export class UsersRepository implements IUsersRepository {
     return row ?? null;
   }
 
-  async listAll(): Promise<UserRow[]> {
-    const { results } = await this.db
-      .prepare(`SELECT ${USER_COLUMNS} FROM users ORDER BY id DESC`)
-      .all<UserRow>();
-    return results;
+  async listAll(limit: number, offset: number): Promise<UserPage> {
+    const [{ results }, countRow] = await Promise.all([
+      this.db
+        .prepare(`SELECT ${USER_COLUMNS} FROM users ORDER BY id DESC LIMIT ? OFFSET ?`)
+        .bind(limit, offset)
+        .all<UserRow>(),
+      this.db.prepare("SELECT COUNT(*) as count FROM users").first<{ count: number }>(),
+    ]);
+    return { items: results, total: countRow?.count ?? 0 };
   }
 
   async findOrCreateByEmail(email: string, avatarGender: AvatarGender, avatarSeed: number): Promise<UserRow> {
@@ -97,6 +107,14 @@ export class UsersRepository implements IUsersRepository {
     const row = await this.db
       .prepare(`UPDATE users SET gender = ?, avatar_seed = ? WHERE id = ? RETURNING ${USER_COLUMNS}`)
       .bind(gender, avatarSeed, userId)
+      .first<UserRow>();
+    return row!;
+  }
+
+  async updatePassword(userId: number, passwordHash: string): Promise<UserRow> {
+    const row = await this.db
+      .prepare(`UPDATE users SET password_hash = ? WHERE id = ? RETURNING ${USER_COLUMNS}`)
+      .bind(passwordHash, userId)
       .first<UserRow>();
     return row!;
   }

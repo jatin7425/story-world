@@ -2,10 +2,11 @@ import type { IStoriesRepository } from "../repositories/stories.repository";
 import type { IChaptersRepository } from "../repositories/chapters.repository";
 import type { IFollowsRepository } from "../repositories/follows.repository";
 import type { StoryRow, ChapterSummaryRow } from "../repositories/types";
+import { toPaginated, type Paginated } from "../lib/pagination";
 
 export interface StoryDetail {
   story: StoryRow;
-  chapters: ChapterSummaryRow[];
+  chapters: Paginated<ChapterSummaryRow>;
   followersCount: number;
   isFollowing: boolean;
 }
@@ -17,9 +18,12 @@ export class StoryService {
     private readonly follows: IFollowsRepository
   ) {}
 
-  listStories(query?: string): Promise<StoryRow[]> {
+  async listStories(page: number, limit: number, query?: string): Promise<Paginated<StoryRow>> {
     const words = tokenize(query);
-    return words.length > 0 ? this.stories.search(words) : this.stories.listPublished();
+    const offset = (page - 1) * limit;
+    const { items, total } =
+      words.length > 0 ? await this.stories.search(words, limit, offset) : await this.stories.listPublished(limit, offset);
+    return toPaginated(items, total, page, limit);
   }
 
   /** Narrow lookup for SEO meta-tag rendering — skips the chapter/follow queries getStoryDetail does. */
@@ -27,17 +31,28 @@ export class StoryService {
     return this.stories.findPublishedBySlug(slug);
   }
 
-  async getStoryDetail(slug: string, currentUserId: number | null): Promise<StoryDetail | null> {
+  async getStoryDetail(
+    slug: string,
+    currentUserId: number | null,
+    chapterPage: number,
+    chapterLimit: number
+  ): Promise<StoryDetail | null> {
     const story = await this.stories.findPublishedBySlug(slug);
     if (!story) return null;
 
-    const [chapters, followersCount, isFollowing] = await Promise.all([
-      this.chapters.listPublishedSummariesByStory(story.id),
+    const chapterOffset = (chapterPage - 1) * chapterLimit;
+    const [chapterPageResult, followersCount, isFollowing] = await Promise.all([
+      this.chapters.listPublishedSummariesByStory(story.id, chapterLimit, chapterOffset),
       this.follows.countForStory(story.id),
       currentUserId ? this.follows.isFollowing(currentUserId, story.id) : Promise.resolve(false),
     ]);
 
-    return { story, chapters, followersCount, isFollowing };
+    return {
+      story,
+      chapters: toPaginated(chapterPageResult.items, chapterPageResult.total, chapterPage, chapterLimit),
+      followersCount,
+      isFollowing,
+    };
   }
 
   async follow(userId: number, slug: string): Promise<{ ok: true } | { error: string }> {

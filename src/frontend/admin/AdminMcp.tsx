@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, type McpToken } from "../api";
+import AdminPagination from "./AdminPagination";
+import Modal from "./Modal";
 
 const TOOL_DOCS = [
   { name: "list_stories", desc: "List every story (any status) with chapter/draft counts." },
@@ -27,22 +29,31 @@ function exampleConfig(endpoint: string, token: string) {
 export default function AdminMcp() {
   const [tokens, setTokens] = useState<McpToken[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showGenerate, setShowGenerate] = useState(false);
   const [name, setName] = useState("");
   const [newToken, setNewToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   const endpoint = `${window.location.origin}/mcp`;
 
   const load = () => {
     setLoading(true);
     api
-      .listMcpTokens()
-      .then((r) => setTokens(r.tokens))
+      .listMcpTokens(page, limit)
+      .then((r) => {
+        setTokens(r.tokens);
+        setTotal(r.total);
+        setTotalPages(r.totalPages);
+      })
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, []);
+  useEffect(load, [page, limit]);
 
   const createToken = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +63,8 @@ export default function AdminMcp() {
       const { token } = await api.createMcpToken(name);
       setNewToken(token);
       setName("");
-      load();
+      if (page === 1) load();
+      else setPage(1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create token");
     }
@@ -69,48 +81,63 @@ export default function AdminMcp() {
     navigator.clipboard.writeText(newToken).then(() => setCopied(true));
   };
 
+  const closeGenerate = () => {
+    setShowGenerate(false);
+    setNewToken(null);
+    setError(null);
+    setCopied(false);
+  };
+
   return (
     <div className="admin-dashboard">
-      <h1>MCP Connector</h1>
-      <p className="admin-subtitle">
-        Let an AI (Claude, ChatGPT, Grok, or anything else that speaks MCP) write stories and chapters directly —
-        no API key or Workers AI billing needed on your end. Everything it writes lands as a <strong>draft</strong>;
-        nothing goes live until you publish it from the Stories page.
-      </p>
-
-      <div className="admin-card">
-        <h2>Generate a token</h2>
-        {newToken ? (
-          <div className="mcp-new-token">
-            <p>
-              Copy this now — it's shown once and can't be retrieved again. If you lose it, revoke it and generate
-              a new one.
-            </p>
-            <code className="mcp-token-value">{newToken}</code>
-            <div className="admin-row-actions">
-              <button type="button" onClick={copyToken}>
-                {copied ? "Copied ✓" : "Copy"}
-              </button>
-              <button type="button" className="admin-btn-ghost" onClick={() => setNewToken(null)}>
-                Done
-              </button>
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={createToken}>
-            <input
-              placeholder='Name (e.g. "Claude Desktop")'
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-            <button type="submit">Generate token</button>
-          </form>
-        )}
-        {error && <p className="error">{error}</p>}
+      <div className="admin-header-row">
+        <div>
+          <h1>MCP Connector</h1>
+          <p className="admin-subtitle">
+            Let an AI (Claude, ChatGPT, Grok, or anything else that speaks MCP) write stories and chapters directly
+            — no API key or Workers AI billing needed on your end. Everything it writes lands as a{" "}
+            <strong>draft</strong>; nothing goes live until you publish it from the Stories page.
+          </p>
+        </div>
+        <button type="button" onClick={() => setShowGenerate(true)}>
+          + Generate token
+        </button>
       </div>
 
-      <h2 className="admin-list-heading">Active tokens ({tokens.length})</h2>
+      {showGenerate && (
+        <Modal title="Generate a token" onClose={closeGenerate}>
+          {newToken ? (
+            <div className="mcp-new-token">
+              <p>
+                Copy this now — it's shown once and can't be retrieved again. If you lose it, revoke it and
+                generate a new one.
+              </p>
+              <code className="mcp-token-value">{newToken}</code>
+              <div className="admin-row-actions">
+                <button type="button" onClick={copyToken}>
+                  {copied ? "Copied ✓" : "Copy"}
+                </button>
+                <button type="button" className="admin-btn-ghost" onClick={closeGenerate}>
+                  Done
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={createToken}>
+              <input
+                placeholder='Name (e.g. "Claude Desktop")'
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+              <button type="submit">Generate token</button>
+              {error && <p className="error">{error}</p>}
+            </form>
+          )}
+        </Modal>
+      )}
+
+      <h2 className="admin-list-heading">Active tokens ({total})</h2>
       {loading ? (
         <p>Loading…</p>
       ) : tokens.length === 0 ? (
@@ -135,6 +162,18 @@ export default function AdminMcp() {
           </ul>
         </div>
       )}
+
+      <AdminPagination
+        page={page}
+        totalPages={totalPages}
+        limit={limit}
+        total={total}
+        onPageChange={setPage}
+        onLimitChange={(l) => {
+          setLimit(l);
+          setPage(1);
+        }}
+      />
 
       <h2 className="admin-list-heading">Endpoint</h2>
       <div className="admin-card mcp-docs">

@@ -4,11 +4,12 @@ import type { IUsersRepository } from "../repositories/users.repository";
 import type { AuthUser } from "../types";
 import type { StoryRow, ProfileCommentRow } from "../repositories/types";
 import { toAuthUser, randomAvatarSeed, isGender } from "../lib/avatar";
+import { toPaginated, type Paginated } from "../lib/pagination";
 
 export interface ProfileData {
   user: AuthUser;
-  followedStories: Pick<StoryRow, "id" | "title" | "slug" | "cover_image_url">[];
-  recentComments: ProfileCommentRow[];
+  followedStories: Paginated<Pick<StoryRow, "id" | "title" | "slug" | "cover_image_url">>;
+  recentComments: Paginated<ProfileCommentRow>;
 }
 
 export class ProfileService {
@@ -18,12 +19,21 @@ export class ProfileService {
     private readonly users: IUsersRepository
   ) {}
 
-  async getProfile(user: AuthUser): Promise<ProfileData> {
-    const [followedStories, recentComments] = await Promise.all([
-      this.follows.listStoriesForUser(user.id),
-      this.comments.listRecentForUser(user.id, 20),
+  async getProfile(
+    user: AuthUser,
+    followedPage: number,
+    commentsPage: number,
+    limit: number
+  ): Promise<ProfileData> {
+    const [followedResult, commentsResult] = await Promise.all([
+      this.follows.listStoriesForUser(user.id, limit, (followedPage - 1) * limit),
+      this.comments.listRecentForUser(user.id, limit, (commentsPage - 1) * limit),
     ]);
-    return { user, followedStories, recentComments };
+    return {
+      user,
+      followedStories: toPaginated(followedResult.items, followedResult.total, followedPage, limit),
+      recentComments: toPaginated(commentsResult.items, commentsResult.total, commentsPage, limit),
+    };
   }
 
   /** Re-rolls avatar_seed so the picture visibly changes, not just the gender bucket it's drawn from. */

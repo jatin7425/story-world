@@ -30,7 +30,8 @@ export class McpToolsService {
   ) {}
 
   async listStories(): Promise<McpToolResult> {
-    const rows = await this.stories.listAllForAdmin();
+    // Not a UI list — the AI needs the full picture, not one page at a time.
+    const { items: rows } = await this.stories.listAllForAdmin(1000, 0);
     const summary = await Promise.all(
       rows.map(async (s) => {
         const chapters = await this.chapters.listSummariesByStory(s.id);
@@ -128,6 +129,7 @@ export class McpToolsService {
       chapterNumber: nextNumber,
       title: typeof args.title === "string" ? args.title.trim() || null : null,
       content,
+      contentFormat: "markdown",
       generatedBy: "mcp",
       status: "draft",
       imageUrl: typeof args.image_url === "string" ? args.image_url.trim() || null : null,
@@ -168,7 +170,7 @@ export class McpToolsService {
     const content = typeof args.content === "string" && args.content.trim() ? args.content : chapter.content;
     const imageUrl = typeof args.image_url === "string" ? args.image_url.trim() || null : chapter.image_url;
 
-    const updated = await this.chapters.updateContent(story.id, chapterNumber, title, content, imageUrl);
+    const updated = await this.chapters.updateContent(story.id, chapterNumber, title, content, "markdown", imageUrl);
 
     return ok({
       message: `Updated draft chapter ${chapterNumber} of "${story.title}".`,

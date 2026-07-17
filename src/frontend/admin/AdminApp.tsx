@@ -7,6 +7,7 @@ import { ADMIN_PATH } from "../adminPath";
 import AdminLogin from "./AdminLogin";
 import AdminStories from "./AdminStories";
 import AdminStoryDetail from "./AdminStoryDetail";
+import AdminChapterCreate from "./AdminChapterCreate";
 import AdminChapterReview from "./AdminChapterReview";
 import AdminUsers from "./AdminUsers";
 import AdminMcp from "./AdminMcp";
@@ -91,6 +92,7 @@ function AdminLayout() {
         <Routes>
           <Route path="/" element={<AdminStories />} />
           <Route path="/stories/:id" element={<AdminStoryDetail />} />
+          <Route path="/stories/:id/chapters/new" element={<AdminChapterCreate />} />
           <Route path="/stories/:id/chapters/:number" element={<AdminChapterReview />} />
           <Route path="/users" element={<AdminUsers />} />
           <Route path="/mcp" element={<AdminMcp />} />

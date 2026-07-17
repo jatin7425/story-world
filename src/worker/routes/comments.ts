@@ -1,12 +1,16 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../hono-env";
 import { getCurrentUser } from "../lib/current-user";
+import { parseReaderPagination } from "../lib/pagination";
 
 export const commentsRoutes = new Hono<AppEnv>();
 
 commentsRoutes.get("/chapters/:id/comments", async (c) => {
-  const comments = await c.get("services").commentService.listForChapter(Number(c.req.param("id")));
-  return c.json({ comments });
+  const { page, limit } = parseReaderPagination(c);
+  const { items, total, totalPages } = await c
+    .get("services")
+    .commentService.listForChapter(Number(c.req.param("id")), page, limit);
+  return c.json({ comments: items, total, page, limit, totalPages });
 });
 
 commentsRoutes.post("/chapters/:id/comments", async (c) => {

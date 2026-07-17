@@ -3,8 +3,10 @@ import type { IChaptersRepository } from "../repositories/chapters.repository";
 import type { ICommentsRepository } from "../repositories/comments.repository";
 import type { ILikesRepository } from "../repositories/likes.repository";
 import type { IFollowsRepository } from "../repositories/follows.repository";
-import type { StoryRow, ChapterRow, ChapterSummaryRow } from "../repositories/types";
+import type { StoryRow, ChapterRow, ChapterSummaryRow, ChapterContentFormat } from "../repositories/types";
 import { slugify } from "../lib/slugify";
+import { toPaginated, type Paginated } from "../lib/pagination";
+import { sanitizeChapterHtml } from "../lib/html-sanitizer";
 
 export interface CreateStoryAdminInput {
   title: string;
@@ -26,13 +28,20 @@ export interface UpdateStoryAdminInput {
 export interface AddChapterAdminInput {
   title?: string;
   content: string;
+  contentFormat?: ChapterContentFormat;
   imageUrl?: string | null;
 }
 
 export interface UpdateChapterAdminInput {
   title?: string | null;
   content?: string;
+  contentFormat?: ChapterContentFormat;
   imageUrl?: string | null;
+}
+
+/** HTML content always passes through the allow-list sanitizer before storage — see html-sanitizer.ts for why. */
+async function resolveContent(content: string, format: ChapterContentFormat): Promise<string> {
+  return format === "html" ? sanitizeChapterHtml(content) : content;
 }
 
 /**
@@ -55,8 +64,9 @@ export class AdminStoryService {
     private readonly follows: IFollowsRepository
   ) {}
 
-  listStories(): Promise<StoryRow[]> {
-    return this.stories.listAllForAdmin();
+  async listStories(page: number, limit: number): Promise<Paginated<StoryRow>> {
+    const { items, total } = await this.stories.listAllForAdmin(limit, (page - 1) * limit);
+    return toPaginated(items, total, page, limit);
   }
 
   getStory(id: number): Promise<StoryRow | null> {
@@ -90,17 +100,20 @@ export class AdminStoryService {
     await this.stories.delete(id);
   }
 
-  listChapters(storyId: number): Promise<ChapterSummaryRow[]> {
-    return this.chapters.listSummariesByStory(storyId);
+  async listChapters(storyId: number, page: number, limit: number): Promise<Paginated<ChapterSummaryRow>> {
+    const { items, total } = await this.chapters.listSummariesByStoryPaged(storyId, limit, (page - 1) * limit);
+    return toPaginated(items, total, page, limit);
   }
 
   async addChapter(storyId: number, input: AddChapterAdminInput): Promise<ChapterRow> {
     const nextNumber = (await this.chapters.maxChapterNumber(storyId)) + 1;
+    const contentFormat = input.contentFormat ?? "markdown";
     return this.chapters.create({
       storyId,
       chapterNumber: nextNumber,
       title: input.title ?? null,
-      content: input.content,
+      content: await resolveContent(input.content, contentFormat),
+      contentFormat,
       generatedBy: "admin",
       status: "published",
       imageUrl: input.imageUrl ?? null,
@@ -124,11 +137,16 @@ export class AdminStoryService {
     const existing = await this.chapters.findByStoryAndNumber(storyId, chapterNumber);
     if (!existing) return null;
 
+    const contentFormat = patch.contentFormat ?? existing.content_format;
+    const content =
+      patch.content !== undefined ? await resolveContent(patch.content, contentFormat) : existing.content;
+
     return this.chapters.updateContent(
       storyId,
       chapterNumber,
       patch.title !== undefined ? patch.title : existing.title,
-      patch.content !== undefined ? patch.content : existing.content,
+      content,
+      contentFormat,
       patch.imageUrl !== undefined ? patch.imageUrl : existing.image_url
     );
   }

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, type Story } from "../api";
 import { ADMIN_PATH } from "../adminPath";
+import AdminPagination from "./AdminPagination";
+import Modal from "./Modal";
 
 type SourceTab = "all" | "mcp" | "admin" | "user";
 
@@ -17,7 +19,12 @@ export default function AdminStories() {
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<SourceTab>("all");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
+  const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
@@ -27,12 +34,16 @@ export default function AdminStories() {
   const load = () => {
     setLoading(true);
     api
-      .adminListStories()
-      .then((r) => setStories(r.stories))
+      .adminListStories(page, limit)
+      .then((r) => {
+        setStories(r.stories);
+        setTotal(r.total);
+        setTotalPages(r.totalPages);
+      })
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, []);
+  useEffect(load, [page, limit]);
 
   const createStory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +60,9 @@ export default function AdminStories() {
       setDescription("");
       setTags("");
       setFreeChapterCount(3);
-      load();
+      setShowCreate(false);
+      if (page === 1) load();
+      else setPage(1);
     } catch (err) {
       setCreateStatus(err instanceof Error ? err.message : "Failed to create story");
     }
@@ -74,32 +87,40 @@ export default function AdminStories() {
 
   return (
     <div className="admin-dashboard">
-      <h1>Stories</h1>
-      <p className="admin-subtitle">Create stories, and review/publish anything written via MCP.</p>
-
-      <div className="admin-card">
-        <h2>New story</h2>
-        <form onSubmit={createStory}>
-          <input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
-          <textarea
-            placeholder="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-          <input placeholder="Tags (comma-separated)" value={tags} onChange={(e) => setTags(e.target.value)} />
-          <label>
-            Free chapters
-            <input
-              type="number"
-              min={0}
-              value={freeChapterCount}
-              onChange={(e) => setFreeChapterCount(Number(e.target.value))}
-            />
-          </label>
-          <button type="submit">Create story</button>
-        </form>
-        {createStatus && <p className="status">{createStatus}</p>}
+      <div className="admin-header-row">
+        <div>
+          <h1>Stories</h1>
+          <p className="admin-subtitle">Create stories, and review/publish anything written via MCP.</p>
+        </div>
+        <button type="button" onClick={() => setShowCreate(true)}>
+          + New story
+        </button>
       </div>
+
+      {showCreate && (
+        <Modal title="New story" onClose={() => setShowCreate(false)}>
+          <form onSubmit={createStory}>
+            <input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+            <textarea
+              placeholder="Description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+            <input placeholder="Tags (comma-separated)" value={tags} onChange={(e) => setTags(e.target.value)} />
+            <label>
+              Free chapters
+              <input
+                type="number"
+                min={0}
+                value={freeChapterCount}
+                onChange={(e) => setFreeChapterCount(Number(e.target.value))}
+              />
+            </label>
+            <button type="submit">Create story</button>
+            {createStatus && <p className="status">{createStatus}</p>}
+          </form>
+        </Modal>
+      )}
 
       <h2 className="admin-list-heading">All stories</h2>
       <div className="admin-tabs">
@@ -133,14 +154,14 @@ export default function AdminStories() {
             <tbody>
               {filtered.map((s) => (
                 <tr key={s.id}>
-                  <td>{s.title}</td>
-                  <td>
+                  <td data-label="Title">{s.title}</td>
+                  <td data-label="Status">
                     <span className={`admin-badge admin-badge-${s.status}`}>{s.status}</span>
                   </td>
-                  <td>
+                  <td data-label="Source">
                     <span className={`admin-badge admin-badge-${s.created_via}`}>{s.created_via}</span>
                   </td>
-                  <td className="admin-table-actions">
+                  <td className="admin-table-actions" data-label="">
                     <button
                       type="button"
                       className="admin-btn-ghost"
@@ -158,6 +179,18 @@ export default function AdminStories() {
           </table>
         </div>
       )}
+
+      <AdminPagination
+        page={page}
+        totalPages={totalPages}
+        limit={limit}
+        total={total}
+        onPageChange={setPage}
+        onLimitChange={(l) => {
+          setLimit(l);
+          setPage(1);
+        }}
+      />
     </div>
   );
 }

@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { api, type AdminUser, type RestrictionType } from "../api";
+import ActionMenu, { type ActionMenuItem } from "./ActionMenu";
+import UserDetailModal from "./UserDetailModal";
+import AdminPagination from "./AdminPagination";
 
 const RESTRICTION_LABELS: Record<RestrictionType, string> = {
   banned: "Banned",
@@ -11,16 +14,25 @@ export default function AdminUsers() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [detailUser, setDetailUser] = useState<AdminUser | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   const load = () => {
     setLoading(true);
     api
-      .listUsers()
-      .then((r) => setUsers(r.users))
+      .listUsers(page, limit)
+      .then((r) => {
+        setUsers(r.users);
+        setTotal(r.total);
+        setTotalPages(r.totalPages);
+      })
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, []);
+  useEffect(load, [page, limit]);
 
   const toggleBan = async (u: AdminUser) => {
     setError(null);
@@ -44,6 +56,26 @@ export default function AdminUsers() {
     }
   };
 
+  const actionsFor = (u: AdminUser): ActionMenuItem[] => {
+    const banned = u.restrictions.includes("banned");
+    const items: ActionMenuItem[] = [{ label: "View details", onClick: () => setDetailUser(u) }];
+
+    if (u.role === "admin") return items;
+
+    items.push(
+      { label: banned ? "Unban" : "Ban", onClick: () => toggleBan(u), danger: !banned },
+      {
+        label: u.restrictions.includes("comment") ? "Allow commenting" : "Block commenting",
+        onClick: () => toggleRestriction(u, "comment"),
+      },
+      {
+        label: u.restrictions.includes("react") ? "Allow reactions" : "Block reactions",
+        onClick: () => toggleRestriction(u, "react"),
+      }
+    );
+    return items;
+  };
+
   return (
     <div className="admin-dashboard">
       <h1>Users</h1>
@@ -55,45 +87,67 @@ export default function AdminUsers() {
       ) : users.length === 0 ? (
         <p className="admin-empty">No users yet.</p>
       ) : (
-        users.map((u) => {
-          const banned = u.restrictions.includes("banned");
-          return (
-            <div key={u.id} className="admin-card admin-user-row">
-              <div className="admin-story-row-header">
-                <div className="admin-story-row-title">
-                  <strong>{u.display_name || u.username || u.email}</strong>
-                  <span className={`admin-badge admin-badge-${u.role}`}>{u.role}</span>
-                </div>
-              </div>
-              <div className="admin-user-email">{u.email}</div>
-
-              {u.restrictions.length > 0 && (
-                <div className="tag-row">
-                  {u.restrictions.map((r) => (
-                    <span key={r} className="admin-restriction-chip">
-                      {RESTRICTION_LABELS[r]}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {u.role !== "admin" && (
-                <div className="admin-row-actions">
-                  <button type="button" className={banned ? "admin-btn-ghost" : "admin-btn-danger"} onClick={() => toggleBan(u)}>
-                    {banned ? "Unban" : "Ban"}
-                  </button>
-                  <button type="button" className="admin-btn-ghost" onClick={() => toggleRestriction(u, "comment")}>
-                    {u.restrictions.includes("comment") ? "Allow commenting" : "Block commenting"}
-                  </button>
-                  <button type="button" className="admin-btn-ghost" onClick={() => toggleRestriction(u, "react")}>
-                    {u.restrictions.includes("react") ? "Allow reactions" : "Block reactions"}
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })
+        <div className="admin-card admin-table-card">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Role</th>
+                <th>Restrictions</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.id}>
+                  <td data-label="User">
+                    <div className="admin-user-cell">
+                      <img src={u.avatar_url} alt="" className="avatar-mini" />
+                      <div>
+                        <div>{u.display_name || u.username || u.email}</div>
+                        <div className="admin-user-email">{u.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td data-label="Role">
+                    <span className={`admin-badge admin-badge-${u.role}`}>{u.role}</span>
+                  </td>
+                  <td data-label="Restrictions">
+                    {u.restrictions.length === 0 ? (
+                      <span className="admin-empty">None</span>
+                    ) : (
+                      <div className="tag-row">
+                        {u.restrictions.map((r) => (
+                          <span key={r} className="admin-restriction-chip">
+                            {RESTRICTION_LABELS[r]}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td className="admin-table-actions" data-label="">
+                    <ActionMenu items={actionsFor(u)} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
+
+      <AdminPagination
+        page={page}
+        totalPages={totalPages}
+        limit={limit}
+        total={total}
+        onPageChange={setPage}
+        onLimitChange={(l) => {
+          setLimit(l);
+          setPage(1);
+        }}
+      />
+
+      {detailUser && <UserDetailModal user={detailUser} onClose={() => setDetailUser(null)} />}
     </div>
   );
 }

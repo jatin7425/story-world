@@ -1,13 +1,20 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../hono-env";
 import { adminGuard } from "../lib/admin-guard";
+import { parseAdminPagination } from "../lib/pagination";
+import type { ChapterContentFormat } from "../repositories/types";
 
 export const adminStoriesRoutes = new Hono<AppEnv>();
 adminStoriesRoutes.use("*", adminGuard);
 
+function parseContentFormat(value: unknown): ChapterContentFormat | undefined {
+  return value === "html" || value === "markdown" ? value : undefined;
+}
+
 adminStoriesRoutes.get("/stories", async (c) => {
-  const stories = await c.get("services").adminStoryService.listStories();
-  return c.json({ stories });
+  const { page, limit } = parseAdminPagination(c);
+  const { items, total, totalPages } = await c.get("services").adminStoryService.listStories(page, limit);
+  return c.json({ stories: items, total, page, limit, totalPages });
 });
 
 adminStoriesRoutes.post("/stories", async (c) => {
@@ -67,8 +74,11 @@ adminStoriesRoutes.get("/stories/:id", async (c) => {
 });
 
 adminStoriesRoutes.get("/stories/:id/chapters", async (c) => {
-  const chapters = await c.get("services").adminStoryService.listChapters(Number(c.req.param("id")));
-  return c.json({ chapters });
+  const { page, limit } = parseAdminPagination(c);
+  const { items, total, totalPages } = await c
+    .get("services")
+    .adminStoryService.listChapters(Number(c.req.param("id")), page, limit);
+  return c.json({ chapters: items, total, page, limit, totalPages });
 });
 
 adminStoriesRoutes.get("/stories/:id/chapters/:number", async (c) => {
@@ -80,23 +90,34 @@ adminStoriesRoutes.get("/stories/:id/chapters/:number", async (c) => {
 });
 
 adminStoriesRoutes.patch("/stories/:id/chapters/:number", async (c) => {
-  const body = await c.req.json<{ title?: string | null; content?: string; image_url?: string | null }>();
+  const body = await c.req.json<{
+    title?: string | null;
+    content?: string;
+    content_format?: string;
+    image_url?: string | null;
+  }>();
   const chapter = await c.get("services").adminStoryService.updateChapter(
     Number(c.req.param("id")),
     Number(c.req.param("number")),
-    { title: body.title, content: body.content, imageUrl: body.image_url }
+    {
+      title: body.title,
+      content: body.content,
+      contentFormat: parseContentFormat(body.content_format),
+      imageUrl: body.image_url,
+    }
   );
   if (!chapter) return c.json({ error: "Chapter not found" }, 404);
   return c.json({ chapter });
 });
 
 adminStoriesRoutes.post("/stories/:id/chapters", async (c) => {
-  const body = await c.req.json<{ title?: string; content?: string; image_url?: string }>();
+  const body = await c.req.json<{ title?: string; content?: string; content_format?: string; image_url?: string }>();
   if (!body.content) return c.json({ error: "Chapter content required" }, 400);
 
   const chapter = await c.get("services").adminStoryService.addChapter(Number(c.req.param("id")), {
     title: body.title,
     content: body.content,
+    contentFormat: parseContentFormat(body.content_format),
     imageUrl: body.image_url,
   });
 

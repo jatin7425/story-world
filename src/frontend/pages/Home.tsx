@@ -1,22 +1,30 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Story } from "../api";
+import Pagination from "../Pagination";
 
 export default function Home() {
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  useEffect(() => setPage(1), [query]);
 
   useEffect(() => {
     setLoading(true);
     const handle = setTimeout(() => {
       api
-        .listStories(query.trim() || undefined)
-        .then((r) => setStories(r.stories))
+        .listStories(query.trim() || undefined, page)
+        .then((r) => {
+          setStories(r.stories);
+          setTotalPages(r.totalPages);
+        })
         .finally(() => setLoading(false));
     }, 250);
     return () => clearTimeout(handle);
-  }, [query]);
+  }, [query, page]);
 
   return (
     <>
@@ -79,6 +87,8 @@ export default function Home() {
           ))}
         </div>
       )}
+
+      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
     </>
   );
 }

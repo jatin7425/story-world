@@ -1,23 +1,32 @@
-import type { ChapterRow, ChapterSummaryRow, ChapterStatus } from "./types";
+import type { ChapterRow, ChapterSummaryRow, ChapterStatus, ChapterContentFormat } from "./types";
 
-const CHAPTER_COLUMNS = "id, story_id, chapter_number, title, content, generated_by, status, image_url, created_at";
+const CHAPTER_COLUMNS =
+  "id, story_id, chapter_number, title, content, content_format, generated_by, status, image_url, created_at";
 const CHAPTER_SUMMARY_COLUMNS = "id, chapter_number, title, status, generated_by, image_url, created_at";
+
+export interface ChapterSummaryPage {
+  items: ChapterSummaryRow[];
+  total: number;
+}
 
 export interface CreateChapterInput {
   storyId: number;
   chapterNumber: number;
   title: string | null;
   content: string;
+  contentFormat: ChapterContentFormat;
   generatedBy: "admin" | "ai" | "mcp";
   status: ChapterStatus;
   imageUrl: string | null;
 }
 
 export interface IChaptersRepository {
-  /** All chapters incl. drafts — admin/MCP use only. */
+  /** All chapters incl. drafts, unpaginated — internal/cascade-delete use only. */
   listSummariesByStory(storyId: number): Promise<ChapterSummaryRow[]>;
-  /** Published-only — safe for anything a reader or crawler can reach. */
-  listPublishedSummariesByStory(storyId: number): Promise<ChapterSummaryRow[]>;
+  /** All chapters incl. drafts, paginated — admin UI. */
+  listSummariesByStoryPaged(storyId: number, limit: number, offset: number): Promise<ChapterSummaryPage>;
+  /** Published-only, paginated — safe for anything a reader or crawler can reach. */
+  listPublishedSummariesByStory(storyId: number, limit: number, offset: number): Promise<ChapterSummaryPage>;
   /** Full rows (incl. content), all statuses, ascending order — MCP read tool use. */
   listFullByStory(storyId: number): Promise<ChapterRow[]>;
   findByStoryAndNumber(storyId: number, chapterNumber: number): Promise<ChapterRow | null>;
@@ -30,6 +39,7 @@ export interface IChaptersRepository {
     chapterNumber: number,
     title: string | null,
     content: string,
+    contentFormat: ChapterContentFormat,
     imageUrl: string | null
   ): Promise<ChapterRow | null>;
   updateStatus(storyId: number, chapterNumber: number, status: ChapterStatus): Promise<ChapterRow | null>;
@@ -48,14 +58,33 @@ export class ChaptersRepository implements IChaptersRepository {
     return results;
   }
 
-  async listPublishedSummariesByStory(storyId: number): Promise<ChapterSummaryRow[]> {
-    const { results } = await this.db
-      .prepare(
-        `SELECT ${CHAPTER_SUMMARY_COLUMNS} FROM chapters WHERE story_id = ? AND status = 'published' ORDER BY chapter_number ASC`
-      )
-      .bind(storyId)
-      .all<ChapterSummaryRow>();
-    return results;
+  async listSummariesByStoryPaged(storyId: number, limit: number, offset: number): Promise<ChapterSummaryPage> {
+    const [{ results }, countRow] = await Promise.all([
+      this.db
+        .prepare(
+          `SELECT ${CHAPTER_SUMMARY_COLUMNS} FROM chapters WHERE story_id = ? ORDER BY chapter_number ASC LIMIT ? OFFSET ?`
+        )
+        .bind(storyId, limit, offset)
+        .all<ChapterSummaryRow>(),
+      this.db.prepare("SELECT COUNT(*) as count FROM chapters WHERE story_id = ?").bind(storyId).first<{ count: number }>(),
+    ]);
+    return { items: results, total: countRow?.count ?? 0 };
+  }
+
+  async listPublishedSummariesByStory(storyId: number, limit: number, offset: number): Promise<ChapterSummaryPage> {
+    const [{ results }, countRow] = await Promise.all([
+      this.db
+        .prepare(
+          `SELECT ${CHAPTER_SUMMARY_COLUMNS} FROM chapters WHERE story_id = ? AND status = 'published' ORDER BY chapter_number ASC LIMIT ? OFFSET ?`
+        )
+        .bind(storyId, limit, offset)
+        .all<ChapterSummaryRow>(),
+      this.db
+        .prepare("SELECT COUNT(*) as count FROM chapters WHERE story_id = ? AND status = 'published'")
+        .bind(storyId)
+        .first<{ count: number }>(),
+    ]);
+    return { items: results, total: countRow?.count ?? 0 };
   }
 
   async listFullByStory(storyId: number): Promise<ChapterRow[]> {
@@ -95,8 +124,8 @@ export class ChaptersRepository implements IChaptersRepository {
   async create(input: CreateChapterInput): Promise<ChapterRow> {
     const row = await this.db
       .prepare(
-        `INSERT INTO chapters (story_id, chapter_number, title, content, generated_by, status, image_url)
-         VALUES (?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO chapters (story_id, chapter_number, title, content, content_format, generated_by, status, image_url)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
          RETURNING ${CHAPTER_COLUMNS}`
       )
       .bind(
@@ -104,6 +133,7 @@ export class ChaptersRepository implements IChaptersRepository {
         input.chapterNumber,
         input.title,
         input.content,
+        input.contentFormat,
         input.generatedBy,
         input.status,
         input.imageUrl
@@ -122,14 +152,15 @@ export class ChaptersRepository implements IChaptersRepository {
     chapterNumber: number,
     title: string | null,
     content: string,
+    contentFormat: ChapterContentFormat,
     imageUrl: string | null
   ): Promise<ChapterRow | null> {
     const row = await this.db
       .prepare(
-        `UPDATE chapters SET title = ?, content = ?, image_url = ?
+        `UPDATE chapters SET title = ?, content = ?, content_format = ?, image_url = ?
          WHERE story_id = ? AND chapter_number = ? RETURNING ${CHAPTER_COLUMNS}`
       )
-      .bind(title, content, imageUrl, storyId, chapterNumber)
+      .bind(title, content, contentFormat, imageUrl, storyId, chapterNumber)
       .first<ChapterRow>();
     return row ?? null;
   }

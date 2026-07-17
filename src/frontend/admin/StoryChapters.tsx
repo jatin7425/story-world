@@ -2,37 +2,29 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type ChapterSummary } from "../api";
 import { ADMIN_PATH } from "../adminPath";
+import AdminPagination from "./AdminPagination";
 
 export default function StoryChapters({ storyId }: { storyId: number }) {
   const [chapters, setChapters] = useState<ChapterSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [status, setStatus] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   const load = () => {
     setLoading(true);
     api
-      .adminListChapters(storyId)
-      .then((r) => setChapters(r.chapters))
+      .adminListChapters(storyId, page, limit)
+      .then((r) => {
+        setChapters(r.chapters);
+        setTotal(r.total);
+        setTotalPages(r.totalPages);
+      })
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, [storyId]);
-
-  const addChapter = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStatus(null);
-    try {
-      await api.addChapter(storyId, { title: title || undefined, content });
-      setTitle("");
-      setContent("");
-      setStatus("Chapter added");
-      load();
-    } catch (err) {
-      setStatus(err instanceof Error ? err.message : "Failed to add chapter");
-    }
-  };
+  useEffect(load, [storyId, page, limit]);
 
   const deleteChapter = async (chapterNumber: number) => {
     if (!confirm(`Delete chapter ${chapterNumber}? This also removes its comments and likes.`)) return;
@@ -48,6 +40,12 @@ export default function StoryChapters({ storyId }: { storyId: number }) {
 
   return (
     <div className="admin-chapters">
+      <div className="admin-list-toolbar">
+        <Link to={`${ADMIN_PATH}/stories/${storyId}/chapters/new`} className="admin-btn-primary-link">
+          + Add chapter
+        </Link>
+      </div>
+
       {loading ? (
         <p>Loading chapters…</p>
       ) : chapters.length === 0 ? (
@@ -67,18 +65,18 @@ export default function StoryChapters({ storyId }: { storyId: number }) {
             <tbody>
               {chapters.map((c) => (
                 <tr key={c.id}>
-                  <td>{c.chapter_number}</td>
-                  <td className="admin-chapter-title-cell">
+                  <td data-label="#">{c.chapter_number}</td>
+                  <td className="admin-chapter-title-cell" data-label="Title">
                     {c.image_url && <img src={c.image_url} alt="" className="admin-chapter-thumb" />}
                     {c.title || <span className="admin-empty">Untitled</span>}
                   </td>
-                  <td>
+                  <td data-label="Status">
                     <span className={`admin-badge admin-badge-${c.status}`}>{c.status}</span>
                   </td>
-                  <td>
+                  <td data-label="Source">
                     <span className={`admin-badge admin-badge-${c.generated_by}`}>{c.generated_by}</span>
                   </td>
-                  <td className="admin-table-actions">
+                  <td className="admin-table-actions" data-label="">
                     <Link to={`${ADMIN_PATH}/stories/${storyId}/chapters/${c.chapter_number}`} className="admin-btn-ghost">
                       Review
                     </Link>
@@ -96,22 +94,17 @@ export default function StoryChapters({ storyId }: { storyId: number }) {
         </div>
       )}
 
-      <form onSubmit={addChapter} className="admin-inline-form">
-        <input
-          placeholder="Chapter title (optional)"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-        <textarea
-          placeholder="Chapter content"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          required
-          rows={8}
-        />
-        <button type="submit">Add chapter</button>
-      </form>
-      {status && <p className="status">{status}</p>}
+      <AdminPagination
+        page={page}
+        totalPages={totalPages}
+        limit={limit}
+        total={total}
+        onPageChange={setPage}
+        onLimitChange={(l) => {
+          setLimit(l);
+          setPage(1);
+        }}
+      />
     </div>
   );
 }
