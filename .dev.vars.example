@@ -1,0 +1,10 @@
+# Copy to .dev.vars for local development (never commit the real .dev.vars file).
+
+RESEND_API_KEY=
+SESSION_SECRET=change-me-to-a-random-string
+
+# Optional: switch chapter generation from Workers AI to a LiteLLM/OpenAI-compatible endpoint.
+# AI_PROVIDER=litellm
+# LITELLM_BASE_URL=https://your-litellm-proxy.example.com
+# LITELLM_API_KEY=
+# LITELLM_MODEL=gpt-4o-mini

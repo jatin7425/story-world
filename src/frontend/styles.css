@@ -1,0 +1,56 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #fafaf8;
+  color: #1a1a1a;
+  line-height: 1.6;
+}
+
+.app-shell { max-width: 720px; margin: 0 auto; padding: 0 1.5rem 4rem; }
+
+.site-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 0;
+  border-bottom: 1px solid #e5e5e0;
+  margin-bottom: 2rem;
+}
+.site-header .brand { font-weight: 700; font-size: 1.25rem; text-decoration: none; color: inherit; }
+.site-header nav { display: flex; gap: 1rem; align-items: center; }
+.site-header nav a, .site-header nav button {
+  background: none; border: none; font: inherit; cursor: pointer; color: inherit; text-decoration: none;
+}
+
+.story-grid { display: grid; gap: 1.5rem; }
+.story-card {
+  display: block; padding: 1.25rem; border: 1px solid #e5e5e0; border-radius: 8px;
+  text-decoration: none; color: inherit;
+}
+.story-card img { width: 100%; border-radius: 6px; margin-bottom: 0.75rem; }
+.story-card h3 { margin: 0 0 0.5rem; }
+.story-card p { margin: 0; color: #555; }
+
+.chapter-list { padding-left: 1.25rem; }
+.locked-badge { color: #999; font-size: 0.9em; }
+
+.chapter-content p { margin: 0 0 1rem; }
+
+.chapter-actions { margin: 2rem 0; }
+.chapter-actions button { font-size: 1rem; padding: 0.4rem 0.9rem; }
+
+.comments { border-top: 1px solid #e5e5e0; padding-top: 1.5rem; }
+.comment { margin-bottom: 1rem; }
+.comment-form { display: flex; flex-direction: column; gap: 0.5rem; }
+.comment-form textarea { min-height: 80px; }
+
+form { display: flex; flex-direction: column; gap: 0.75rem; max-width: 480px; }
+input, textarea { padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font: inherit; }
+button { padding: 0.5rem 1rem; border: 1px solid #1a1a1a; background: #1a1a1a; color: #fff; border-radius: 4px; cursor: pointer; width: fit-content; }
+button:hover { opacity: 0.85; }
+
+.error { color: #c0392b; }
+.status { color: #2c7a4b; }
+
+.admin-page section { margin-bottom: 2.5rem; }
