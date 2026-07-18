@@ -4,6 +4,7 @@ import { api, type Story } from "../api";
 import { ADMIN_PATH } from "../adminPath";
 import AdminPagination from "./AdminPagination";
 import Modal from "./Modal";
+import RefreshButton from "./RefreshButton";
 
 type SourceTab = "all" | "mcp" | "admin" | "user";
 
@@ -122,7 +123,10 @@ export default function AdminStories() {
         </Modal>
       )}
 
-      <h2 className="admin-list-heading">All stories</h2>
+      <div className="admin-list-heading-row">
+        <h2 className="admin-list-heading">All stories</h2>
+        <RefreshButton onClick={load} loading={loading} />
+      </div>
       <div className="admin-tabs">
         {TABS.map((t) => (
           <button

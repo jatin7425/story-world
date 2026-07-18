@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type AdminImage } from "../api";
+import RefreshButton from "./RefreshButton";
 
 export default function AdminImages() {
   const [images, setImages] = useState<AdminImage[]>([]);
@@ -104,7 +105,10 @@ export default function AdminImages() {
         {error && <p className="error">{error}</p>}
       </div>
 
-      <h2 className="admin-list-heading">Uploaded images ({images.length})</h2>
+      <div className="admin-list-heading-row">
+        <h2 className="admin-list-heading">Uploaded images ({images.length})</h2>
+        <RefreshButton onClick={load} loading={loading} />
+      </div>
       {loading ? (
         <p>Loading…</p>
       ) : images.length === 0 ? (

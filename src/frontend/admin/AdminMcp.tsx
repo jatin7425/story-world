@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, type McpToken } from "../api";
 import AdminPagination from "./AdminPagination";
 import Modal from "./Modal";
+import RefreshButton from "./RefreshButton";
 
 const TOOL_DOCS = [
   { name: "list_stories", desc: "List every story (any status) with chapter/draft counts." },
@@ -139,7 +140,10 @@ export default function AdminMcp() {
         </Modal>
       )}
 
-      <h2 className="admin-list-heading">Active tokens ({total})</h2>
+      <div className="admin-list-heading-row">
+        <h2 className="admin-list-heading">Active tokens ({total})</h2>
+        <RefreshButton onClick={load} loading={loading} />
+      </div>
       {loading ? (
         <p>Loading…</p>
       ) : tokens.length === 0 ? (

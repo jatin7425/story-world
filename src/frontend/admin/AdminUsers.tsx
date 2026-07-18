@@ -3,6 +3,7 @@ import { api, type AdminUser, type RestrictionType } from "../api";
 import ActionMenu, { type ActionMenuItem } from "./ActionMenu";
 import UserDetailModal from "./UserDetailModal";
 import AdminPagination from "./AdminPagination";
+import RefreshButton from "./RefreshButton";
 
 const RESTRICTION_LABELS: Record<RestrictionType, string> = {
   banned: "Banned",
@@ -78,8 +79,13 @@ export default function AdminUsers() {
 
   return (
     <div className="admin-dashboard">
-      <h1>Users</h1>
-      <p className="admin-subtitle">Ban accounts or restrict specific privileges.</p>
+      <div className="admin-header-row">
+        <div>
+          <h1>Users</h1>
+          <p className="admin-subtitle">Ban accounts or restrict specific privileges.</p>
+        </div>
+        <RefreshButton onClick={load} loading={loading} />
+      </div>
       {error && <p className="error">{error}</p>}
 
       {loading ? (

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api, type ChapterSummary } from "../api";
 import { ADMIN_PATH } from "../adminPath";
 import AdminPagination from "./AdminPagination";
+import RefreshButton from "./RefreshButton";
 
 export default function StoryChapters({ storyId }: { storyId: number }) {
   const [chapters, setChapters] = useState<ChapterSummary[]>([]);
@@ -41,6 +42,7 @@ export default function StoryChapters({ storyId }: { storyId: number }) {
   return (
     <div className="admin-chapters">
       <div className="admin-list-toolbar">
+        <RefreshButton onClick={load} loading={loading} />
         <Link to={`${ADMIN_PATH}/stories/${storyId}/chapters/new`} className="admin-btn-primary-link">
           + Add chapter
         </Link>
