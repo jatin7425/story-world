@@ -37,7 +37,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export type Gender = "male" | "female" | "other";
-export type Lang = "en" | "hi" | "ja" | "ko";
+export type Lang = "en" | "hi" | "ja" | "ko" | "hinglish";
 
 export interface User {
   id: number;

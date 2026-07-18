@@ -19,7 +19,7 @@ export interface Env
 
 export type Gender = "male" | "female" | "other";
 export type AvatarGender = "male" | "female";
-export type SupportedLang = "hi" | "ja" | "ko";
+export type SupportedLang = "hi" | "ja" | "ko" | "hinglish";
 export type Lang = "en" | SupportedLang;
 
 export interface AuthUser {

@@ -116,19 +116,22 @@ export class TranslationJobService {
       const story = await this.stories.findById(item.entity_id);
       if (!story) throw new Error("Story no longer exists");
 
-      const titleResult = await translateViaProviders(this.providers, buildShortTextPrompt(lang), story.title, this.aion);
-      logLines.push(...titleResult.attempts.map(fmtAttempt));
-
+      // Titles are deliberately left in English, not translated — a short
+      // free-tier model call for a 2-4 word title was unreliably following
+      // "output only the translated text" and returning a full paragraph
+      // instead (observed in production). Only the description gets translated.
       let description: string | null = null;
+      let providerUsed = "cache";
       if (story.description) {
         const descResult = await translateViaProviders(this.providers, buildShortTextPrompt(lang), story.description, this.aion);
         logLines.push(...descResult.attempts.map(fmtAttempt));
         description = descResult.text;
+        providerUsed = descResult.provider;
       }
 
-      await this.storyTranslations.upsert(story.id, lang, titleResult.text, description);
+      await this.storyTranslations.upsert(story.id, lang, story.title, description);
       await this.stories.addLang(story.id, lang);
-      return titleResult.provider;
+      return providerUsed;
     }
 
     // chapter
@@ -140,14 +143,8 @@ export class TranslationJobService {
     const chapter = await this.chapters.findById(item.entity_id);
     if (!chapter) throw new Error("Chapter no longer exists");
 
-    let translatedTitle: string | null = null;
+    // Title left in English for the same reason as the story title above.
     let providerUsed = "cache";
-    if (chapter.title) {
-      const titleResult = await translateViaProviders(this.providers, buildShortTextPrompt(lang), chapter.title, this.aion);
-      logLines.push(...titleResult.attempts.map(fmtAttempt));
-      translatedTitle = titleResult.text;
-      providerUsed = titleResult.provider;
-    }
 
     const segments = parseIntoSegments(chapter.content, chapter.content_format);
     const chunks = groupIntoChunks(segments, chapter.content_format);
@@ -171,7 +168,7 @@ export class TranslationJobService {
     const reassembled = reassembleSegments(segments, translatedByIndex, chapter.content_format);
     const finalContent = chapter.content_format === "html" ? await sanitizeChapterHtml(reassembled) : reassembled;
 
-    await this.chapterTranslations.upsert(chapter.id, lang, translatedTitle, finalContent, chapter.content_format);
+    await this.chapterTranslations.upsert(chapter.id, lang, chapter.title, finalContent, chapter.content_format);
     await this.chapters.addLang(chapter.id, lang);
     return providerUsed;
   }

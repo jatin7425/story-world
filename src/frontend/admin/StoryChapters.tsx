@@ -7,7 +7,7 @@ import AdminPagination from "./AdminPagination";
 import RefreshButton from "./RefreshButton";
 import TranslationJobProgress from "./TranslationJobProgress";
 
-const TRANSLATABLE_LANGS: Lang[] = ["hi", "ja", "ko"];
+const TRANSLATABLE_LANGS: Lang[] = ["hi", "hinglish", "ja", "ko"];
 
 export default function StoryChapters({ storyId }: { storyId: number }) {
   const [chapters, setChapters] = useState<ChapterSummary[]>([]);

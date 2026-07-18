@@ -1,4 +1,5 @@
 import type { AuthUser, Gender, AvatarGender } from "../types";
+import { isLang } from "./translation-prompt";
 
 export function isGender(value: unknown): value is Gender {
   return value === "male" || value === "female" || value === "other";
@@ -50,8 +51,4 @@ export function toAuthUser(row: AuthUserRow): AuthUser {
     preferred_lang: isLang(row.preferred_lang) ? row.preferred_lang : null,
     secondary_lang: isLang(row.secondary_lang) ? row.secondary_lang : null,
   };
-}
-
-function isLang(value: string | null): value is AuthUser["preferred_lang"] & string {
-  return value === "en" || value === "hi" || value === "ja" || value === "ko";
 }

@@ -5,7 +5,7 @@ import { useAuth } from "../AuthContext";
 import { LANG_NAMES } from "../LocaleContext";
 import PasswordInput from "../PasswordInput";
 
-const LANG_OPTIONS: Lang[] = ["en", "hi", "ja", "ko"];
+const LANG_OPTIONS: Lang[] = ["en", "hi", "hinglish", "ja", "ko"];
 
 type Mode = "magic" | "password-login" | "password-signup";
 

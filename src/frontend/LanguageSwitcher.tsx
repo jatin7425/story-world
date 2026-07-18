@@ -1,6 +1,6 @@
 import { useLocale, LANG_NAMES, type Lang } from "./LocaleContext";
 
-const OPTIONS: Lang[] = ["en", "hi", "ja", "ko"];
+const OPTIONS: Lang[] = ["en", "hi", "hinglish", "ja", "ko"];
 
 export default function LanguageSwitcher({ className = "lang-switcher" }: { className?: string }) {
   const { lang, setLang } = useLocale();
