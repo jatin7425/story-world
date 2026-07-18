@@ -181,13 +181,18 @@ export class McpToolsService {
   }
 
   async explainSite(): Promise<McpToolResult> {
-    return ok(
+    const explanation =
       "This site is a story platform where MCP-created content is always stored as a draft. " +
-        "Stories and chapters written or edited by the AI are not visible to readers until an admin reviews and publishes them. " +
-        "Use list_stories to inspect existing stories and draft counts, get_story_chapters to load a story's full chapter history and status, " +
-        "create_story to start a new draft story, create_chapter to append a draft chapter, and edit_chapter to modify an existing draft chapter. " +
-        "Do not expect MCP actions to publish automatically; publication is an explicit admin-only step. " +
-        "When creating a story, you can include tags, a cover image URL, and a free chapter count; chapters support a title, markdown content, and optional image URL."
-    );
+      "Stories and chapters written or edited by the AI are not visible to readers until an admin reviews and publishes them. " +
+      "Use list_stories to inspect existing stories and draft counts, get_story_chapters to load a story's full chapter history and status, " +
+      "create_story to start a new draft story, create_chapter to append a draft chapter, and edit_chapter to modify an existing draft chapter. " +
+      "Do not expect MCP actions to publish automatically; publication is an explicit admin-only step. " +
+      "When creating a story, you can include tags, a cover image URL, and a free chapter count; chapters support a title, markdown content, and optional image URL.";
+
+    return {
+      ...ok(explanation),
+      text: explanation,
+      explanation,
+    } as McpToolResult & { text: string; explanation: string };
   }
 }
