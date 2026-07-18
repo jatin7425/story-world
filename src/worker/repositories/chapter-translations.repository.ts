@@ -11,6 +11,7 @@ export interface IChapterTranslationsRepository {
   ): Promise<ChapterTranslationRow>;
   deleteForChapter(chapterId: number): Promise<void>;
   deleteForChapters(chapterIds: number[]): Promise<void>;
+  deleteOne(chapterId: number, lang: string): Promise<void>;
 }
 
 export class ChapterTranslationsRepository implements IChapterTranslationsRepository {
@@ -53,5 +54,9 @@ export class ChapterTranslationsRepository implements IChapterTranslationsReposi
     if (chapterIds.length === 0) return;
     const placeholders = chapterIds.map(() => "?").join(",");
     await this.db.prepare(`DELETE FROM chapter_translations WHERE chapter_id IN (${placeholders})`).bind(...chapterIds).run();
+  }
+
+  async deleteOne(chapterId: number, lang: string): Promise<void> {
+    await this.db.prepare("DELETE FROM chapter_translations WHERE chapter_id = ? AND lang = ?").bind(chapterId, lang).run();
   }
 }

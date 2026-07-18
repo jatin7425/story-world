@@ -45,3 +45,23 @@ adminTranslationJobsRoutes.get("/translation-jobs/:id", async (c) => {
   if (!result) return c.json({ error: "Job not found" }, 404);
   return c.json(result);
 });
+
+adminTranslationJobsRoutes.delete("/translation-jobs/translations/story/:id/:lang", async (c) => {
+  const storyId = Number(c.req.param("id"));
+  const lang = c.req.param("lang");
+  if (!Number.isFinite(storyId)) return c.json({ error: "Invalid story id" }, 400);
+  if (!isSupportedLang(lang)) return c.json({ error: "Invalid language" }, 400);
+
+  await c.get("services").translationJobService.deleteTranslation("story", storyId, lang);
+  return c.json({ ok: true });
+});
+
+adminTranslationJobsRoutes.delete("/translation-jobs/translations/chapter/:id/:lang", async (c) => {
+  const chapterId = Number(c.req.param("id"));
+  const lang = c.req.param("lang");
+  if (!Number.isFinite(chapterId)) return c.json({ error: "Invalid chapter id" }, 400);
+  if (!isSupportedLang(lang)) return c.json({ error: "Invalid language" }, 400);
+
+  await c.get("services").translationJobService.deleteTranslation("chapter", chapterId, lang);
+  return c.json({ ok: true });
+});

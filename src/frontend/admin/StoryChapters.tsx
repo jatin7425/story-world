@@ -47,6 +47,12 @@ export default function StoryChapters({ storyId }: { storyId: number }) {
     load();
   };
 
+  const deleteChapterTranslation = async (c: ChapterSummary, lang: Lang) => {
+    if (!confirm(`Delete the ${LANG_NAMES[lang]} translation of chapter ${c.chapter_number}? A future translation job will regenerate it.`)) return;
+    await api.deleteChapterTranslation(c.id, lang);
+    load();
+  };
+
   const toggleChapterSelected = (id: number) => {
     setSelectedChapters((prev) => {
       const next = new Set(prev);
@@ -149,6 +155,7 @@ export default function StoryChapters({ storyId }: { storyId: number }) {
                 <th>Title</th>
                 <th>Status</th>
                 <th>Source</th>
+                <th>Translations</th>
                 <th></th>
               </tr>
             </thead>
@@ -173,6 +180,27 @@ export default function StoryChapters({ storyId }: { storyId: number }) {
                   </td>
                   <td data-label="Source">
                     <span className={`admin-badge admin-badge-${c.generated_by}`}>{c.generated_by}</span>
+                  </td>
+                  <td data-label="Translations">
+                    <div className="admin-lang-chip-row">
+                      {c.lang
+                        .split(",")
+                        .filter((l): l is Lang => l !== "en" && l !== "")
+                        .map((l) => (
+                          <span key={l} className="admin-lang-chip">
+                            {LANG_NAMES[l]}
+                            <button
+                              type="button"
+                              onClick={() => deleteChapterTranslation(c, l)}
+                              aria-label={`Delete ${LANG_NAMES[l]} translation`}
+                              title={`Delete ${LANG_NAMES[l]} translation`}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      {c.lang === "en" && <span className="admin-empty">None</span>}
+                    </div>
                   </td>
                   <td className="admin-table-actions" data-label="">
                     <Link to={`${ADMIN_PATH}/stories/${storyId}/chapters/${c.chapter_number}`} className="admin-btn-ghost">

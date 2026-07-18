@@ -68,6 +68,17 @@ export class TranslationJobService {
     return this.jobs.findJob(jobId);
   }
 
+  /** Admin action: wipes a single cached (entity, lang) translation — e.g. to discard a bad translation and let a future job regenerate it cleanly. */
+  async deleteTranslation(entityType: "story" | "chapter", entityId: number, lang: SupportedLang): Promise<void> {
+    if (entityType === "story") {
+      await this.storyTranslations.deleteOne(entityId, lang);
+      await this.stories.removeLang(entityId, lang);
+    } else {
+      await this.chapterTranslations.deleteOne(entityId, lang);
+      await this.chapters.removeLang(entityId, lang);
+    }
+  }
+
   async stepJob(jobId: number): Promise<StepResult> {
     const item = await this.jobs.findNextPendingItem(jobId);
     if (!item) {

@@ -39,6 +39,7 @@ export interface ChapterSummaryRow {
   status: ChapterStatus;
   generated_by: string;
   image_url: string | null;
+  lang: string;
   created_at: string;
 }
 

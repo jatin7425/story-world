@@ -4,6 +4,7 @@ export interface IStoryTranslationsRepository {
   find(storyId: number, lang: string): Promise<StoryTranslationRow | null>;
   upsert(storyId: number, lang: string, title: string, description: string | null): Promise<StoryTranslationRow>;
   deleteForStory(storyId: number): Promise<void>;
+  deleteOne(storyId: number, lang: string): Promise<void>;
 }
 
 export class StoryTranslationsRepository implements IStoryTranslationsRepository {
@@ -32,5 +33,9 @@ export class StoryTranslationsRepository implements IStoryTranslationsRepository
 
   async deleteForStory(storyId: number): Promise<void> {
     await this.db.prepare("DELETE FROM story_translations WHERE story_id = ?").bind(storyId).run();
+  }
+
+  async deleteOne(storyId: number, lang: string): Promise<void> {
+    await this.db.prepare("DELETE FROM story_translations WHERE story_id = ? AND lang = ?").bind(storyId, lang).run();
   }
 }

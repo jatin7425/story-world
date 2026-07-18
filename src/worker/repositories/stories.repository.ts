@@ -44,6 +44,8 @@ export interface IStoriesRepository {
   addLang(id: number, lang: string): Promise<void>;
   /** Resets `lang` back to just "en" (e.g. after the source title/description was edited, invalidating cached translations). */
   resetLang(id: number): Promise<void>;
+  /** Removes a single lang code (e.g. after an admin deletes just that one cached translation). */
+  removeLang(id: number, lang: string): Promise<void>;
 }
 
 export class StoriesRepository implements IStoriesRepository {
@@ -190,5 +192,14 @@ export class StoriesRepository implements IStoriesRepository {
 
   async resetLang(id: number): Promise<void> {
     await this.db.prepare("UPDATE stories SET lang = 'en' WHERE id = ?").bind(id).run();
+  }
+
+  async removeLang(id: number, lang: string): Promise<void> {
+    const row = await this.db.prepare("SELECT lang FROM stories WHERE id = ?").bind(id).first<{ lang: string }>();
+    if (!row) return;
+    const langs = new Set(row.lang.split(",").filter(Boolean));
+    langs.delete(lang);
+    langs.add("en"); // "en" is the source language, always implicitly available
+    await this.db.prepare("UPDATE stories SET lang = ? WHERE id = ?").bind([...langs].join(","), id).run();
   }
 }

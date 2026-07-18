@@ -75,6 +75,7 @@ export interface ChapterSummary {
   status: ChapterStatus;
   generated_by: ContentSource;
   image_url: string | null;
+  lang: string;
   created_at: string;
 }
 
@@ -375,6 +376,10 @@ export const api = {
   stepTranslationJob: (jobId: number) =>
     request<{ done: true } | TranslationJobStepResult>(`/api/admin/translation-jobs/${jobId}/step`, { method: "POST" }),
   getTranslationJob: (jobId: number) => request<TranslationJobWithItems>(`/api/admin/translation-jobs/${jobId}`),
+  deleteStoryTranslation: (storyId: number, lang: Lang) =>
+    request<{ ok: true }>(`/api/admin/translation-jobs/translations/story/${storyId}/${lang}`, { method: "DELETE" }),
+  deleteChapterTranslation: (chapterId: number, lang: Lang) =>
+    request<{ ok: true }>(`/api/admin/translation-jobs/translations/chapter/${chapterId}/${lang}`, { method: "DELETE" }),
 
   // --- OAuth consent screen (for the /oauth/authorize page) ---
   getOAuthClient: (clientId: string) =>

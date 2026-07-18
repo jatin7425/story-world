@@ -1190,3 +1190,41 @@
 .job-log-panel pre:last-child {
   margin-bottom: 0;
 }
+
+/* Cached-translation chips (chapter table "Translations" column, story
+   detail "Translations" field) — each chip is a deletable cached language. */
+.admin-lang-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.admin-lang-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--a-bg);
+  border: 1px solid var(--a-border);
+  border-radius: 999px;
+  padding: 0.15rem 0.4rem 0.15rem 0.6rem;
+  font-size: 0.78rem;
+  color: var(--a-text);
+}
+.admin-lang-chip button {
+  background: transparent !important;
+  border: none !important;
+  color: var(--a-text-muted) !important;
+  width: 1.2rem !important;
+  height: 1.2rem !important;
+  padding: 0 !important;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.admin-lang-chip button:hover {
+  background: var(--a-danger) !important;
+  color: #1a0e0e !important;
+}

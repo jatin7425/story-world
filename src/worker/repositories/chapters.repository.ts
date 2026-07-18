@@ -2,7 +2,7 @@ import type { ChapterRow, ChapterSummaryRow, ChapterStatus, ChapterContentFormat
 
 const CHAPTER_COLUMNS =
   "id, story_id, chapter_number, title, content, content_format, generated_by, status, image_url, lang, created_at";
-const CHAPTER_SUMMARY_COLUMNS = "id, chapter_number, title, status, generated_by, image_url, created_at";
+const CHAPTER_SUMMARY_COLUMNS = "id, chapter_number, title, status, generated_by, image_url, lang, created_at";
 
 export interface ChapterSummaryPage {
   items: ChapterSummaryRow[];
@@ -50,6 +50,8 @@ export interface IChaptersRepository {
   addLang(id: number, lang: string): Promise<void>;
   /** Resets `lang` back to just "en" (e.g. after the source title/content was edited, invalidating cached translations). */
   resetLang(id: number): Promise<void>;
+  /** Removes a single lang code (e.g. after an admin deletes just that one cached translation). */
+  removeLang(id: number, lang: string): Promise<void>;
 }
 
 export class ChaptersRepository implements IChaptersRepository {
@@ -207,5 +209,14 @@ export class ChaptersRepository implements IChaptersRepository {
 
   async resetLang(id: number): Promise<void> {
     await this.db.prepare("UPDATE chapters SET lang = 'en' WHERE id = ?").bind(id).run();
+  }
+
+  async removeLang(id: number, lang: string): Promise<void> {
+    const row = await this.db.prepare("SELECT lang FROM chapters WHERE id = ?").bind(id).first<{ lang: string }>();
+    if (!row) return;
+    const langs = new Set(row.lang.split(",").filter(Boolean));
+    langs.delete(lang);
+    langs.add("en");
+    await this.db.prepare("UPDATE chapters SET lang = ? WHERE id = ?").bind([...langs].join(","), id).run();
   }
 }
