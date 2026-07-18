@@ -1,15 +1,9 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { api, type Lang } from "./api";
+import { api } from "./api";
 import { useAuth } from "./AuthContext";
+import { isLang, type Lang } from "./langConstants";
 
-export type { Lang };
 const STORAGE_KEY = "storyglobal-lang";
-
-export const LANG_NAMES: Record<Lang, string> = { en: "EN", hi: "हिन्दी", ja: "日本語", ko: "한국어", hinglish: "Hinglish" };
-
-export function isLang(value: string | null | undefined): value is Lang {
-  return value === "en" || value === "hi" || value === "ja" || value === "ko" || value === "hinglish";
-}
 
 interface LocaleState {
   lang: Lang;

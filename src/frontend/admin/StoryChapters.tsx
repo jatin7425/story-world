@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type ChapterSummary, type Lang, type TranslationJobWithItems } from "../api";
-import { LANG_NAMES } from "../LocaleContext";
+import { TRANSLATABLE_LANGS, LANG_NAMES } from "../langConstants";
 import { ADMIN_PATH } from "../adminPath";
 import AdminPagination from "./AdminPagination";
 import RefreshButton from "./RefreshButton";
 import TranslationJobProgress from "./TranslationJobProgress";
-
-const TRANSLATABLE_LANGS: Lang[] = ["hi", "hinglish", "ja", "ko"];
 
 export default function StoryChapters({ storyId }: { storyId: number }) {
   const [chapters, setChapters] = useState<ChapterSummary[]>([]);

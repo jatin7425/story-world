@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, type ChapterSummary, type Story as StoryType } from "../api";
 import { useAuth } from "../AuthContext";
-import { useLocale, LANG_NAMES } from "../LocaleContext";
+import { useLocale } from "../LocaleContext";
+import { LANG_NAMES } from "../langConstants";
 import Breadcrumbs from "../Breadcrumbs";
 import Pagination from "../Pagination";
 

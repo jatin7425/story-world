@@ -2,10 +2,8 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, type Gender, type Lang } from "../api";
 import { useAuth } from "../AuthContext";
-import { LANG_NAMES } from "../LocaleContext";
+import { ALL_LANGS, LANG_NAMES } from "../langConstants";
 import PasswordInput from "../PasswordInput";
-
-const LANG_OPTIONS: Lang[] = ["en", "hi", "hinglish", "ja", "ko"];
 
 type Mode = "magic" | "password-login" | "password-signup";
 
@@ -205,7 +203,7 @@ export default function Login() {
             <label>
               Preferred reading language
               <select value={preferredLang} onChange={(e) => setPreferredLang(e.target.value as Lang)}>
-                {LANG_OPTIONS.map((l) => (
+                {ALL_LANGS.map((l) => (
                   <option key={l} value={l}>
                     {LANG_NAMES[l]}
                   </option>
@@ -216,7 +214,7 @@ export default function Login() {
               Secondary language (optional)
               <select value={secondaryLang} onChange={(e) => setSecondaryLang(e.target.value as Lang | "")}>
                 <option value="">None</option>
-                {LANG_OPTIONS.map((l) => (
+                {ALL_LANGS.map((l) => (
                   <option key={l} value={l}>
                     {LANG_NAMES[l]}
                   </option>

@@ -1,6 +1,5 @@
-import { useLocale, LANG_NAMES, type Lang } from "./LocaleContext";
-
-const OPTIONS: Lang[] = ["en", "hi", "hinglish", "ja", "ko"];
+import { useLocale } from "./LocaleContext";
+import { ALL_LANGS, LANG_NAMES, type Lang } from "./langConstants";
 
 export default function LanguageSwitcher({ className = "lang-switcher" }: { className?: string }) {
   const { lang, setLang } = useLocale();
@@ -12,7 +11,7 @@ export default function LanguageSwitcher({ className = "lang-switcher" }: { clas
       aria-label="Reading language"
       title="Reading language"
     >
-      {OPTIONS.map((l) => (
+      {ALL_LANGS.map((l) => (
         <option key={l} value={l}>
           {LANG_NAMES[l]}
         </option>
