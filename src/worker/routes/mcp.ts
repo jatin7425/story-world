@@ -179,7 +179,24 @@ mcpRoutes.post("/", async (c) => {
     method?: string;
     params?: Record<string, unknown>;
   };
-  const respond = (body: unknown) => c.json(body, 200, CORS_HEADERS);
+
+  console.log("MCP debug parsed request", {
+    raw: message,
+    method,
+    id,
+    params,
+  });
+
+  const respond = (body: unknown, status = 200) => {
+    console.log("MCP debug response", {
+      method,
+      id,
+      status,
+      headers: CORS_HEADERS,
+      body,
+    });
+    return c.json(body, status, CORS_HEADERS);
+  };
 
   switch (method) {
     case "initialize": {
