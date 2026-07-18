@@ -189,10 +189,14 @@ export class McpToolsService {
       "Do not expect MCP actions to publish automatically; publication is an explicit admin-only step. " +
       "When creating a story, you can include tags, a cover image URL, and a free chapter count; chapters support a title, markdown content, and optional image URL.";
 
-    return {
-      ...ok(explanation),
-      text: explanation,
-      explanation,
-    } as McpToolResult & { text: string; explanation: string };
+    return ok({ explanation });
+  }
+
+  async echoText(): Promise<McpToolResult> {
+    return ok({ message: "hello" });
+  }
+
+  async echoStructured(): Promise<McpToolResult> {
+    return ok({ message: "hello" });
   }
 }

@@ -119,7 +119,7 @@ type ToolName = (typeof TOOLS)[number]["name"];
 
 const TOOL_HANDLERS: Record<
   ToolName,
-  (svc: McpToolsService, args: Record<string, unknown>) => Promise<unknown>
+  (svc: McpToolsService, args: Record<string, unknown>) => Promise<McpToolResult>
 > = {
   list_stories: (svc) => svc.listStories(),
   get_story_chapters: (svc, args) => svc.getStoryChapters(args),
@@ -127,8 +127,8 @@ const TOOL_HANDLERS: Record<
   create_chapter: (svc, args) => svc.createChapter(args),
   edit_chapter: (svc, args) => svc.editChapter(args),
   explain_site: (svc) => svc.explainSite(),
-  echo_text: () => Promise.resolve("hello"),
-  echo_structured: () => Promise.resolve({ message: "hello" }),
+  echo_text: (svc) => svc.echoText(),
+  echo_structured: (svc) => svc.echoStructured(),
 };
 
 function rpcResult(id: unknown, result: unknown) {
