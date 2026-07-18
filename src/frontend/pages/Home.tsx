@@ -66,7 +66,12 @@ export default function Home() {
                 )}
               </div>
               <div className="card-body">
-                <h3>{s.title}</h3>
+                <h3>
+                  {s.title}
+                  {s.age_rating && (
+                    <span className={`age-rating-badge age-rating-${s.age_rating.replace("+", "plus")}`}>{s.age_rating}</span>
+                  )}
+                </h3>
                 {s.description && <p>{s.description}</p>}
                 {s.tags && (
                   <div className="tag-row">

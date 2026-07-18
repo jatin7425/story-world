@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Routes, Route, Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { useTheme } from "./ThemeContext";
-import LanguageSwitcher from "./LanguageSwitcher";
 import Home from "./pages/Home";
 import StoryPage from "./pages/Story";
 import ChapterPage from "./pages/Chapter";
@@ -101,7 +100,6 @@ function Header() {
           </Link>
           <nav className="desktop-nav">{authLinks}</nav>
           <div className="header-controls">
-            <LanguageSwitcher />
             <ThemeToggle />
             <button
               type="button"
@@ -140,10 +138,6 @@ function Header() {
               <Link to="/" onClick={closeMenu}>
                 Home
               </Link>
-            </div>
-
-            <div className="drawer-section">
-              <LanguageSwitcher className="lang-switcher lang-switcher-drawer" />
             </div>
 
             <div className="drawer-section drawer-section-actions">

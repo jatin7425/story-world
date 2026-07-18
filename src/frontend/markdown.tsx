@@ -12,16 +12,38 @@ export function renderChapterContent(content: string, format: ChapterContentForm
   return format === "html" ? renderRichHtml(content) : renderMarkdownContent(content);
 }
 
+export type MarkdownLineKind = "heading2" | "heading3" | "list" | "paragraph" | "blank";
+
+export interface MarkdownLine {
+  kind: MarkdownLineKind;
+  /** Inner text with any "- "/"# "/"## " prefix already stripped. */
+  text: string;
+}
+
+/**
+ * Splits chapter markdown into one line per array entry, matching how
+ * chapters are stored (one paragraph per line, no blank-line-joined
+ * multi-line paragraphs).
+ */
+export function parseMarkdownLines(content: string): MarkdownLine[] {
+  return content.split("\n").map((line) => {
+    if (line.trim() === "") return { kind: "blank", text: "" };
+    if (line.startsWith("- ")) return { kind: "list", text: line.slice(2) };
+    if (line.startsWith("## ")) return { kind: "heading3", text: line.slice(3) };
+    if (line.startsWith("# ")) return { kind: "heading2", text: line.slice(2) };
+    return { kind: "paragraph", text: line };
+  });
+}
+
 /**
  * Deliberately tiny, dependency-free markdown-ish renderer — supports
  * **bold**, *italic*, "# "/"## " headings, and "- " lists, one block per
- * line (matching how chapters have always been stored: one paragraph per
- * line). Parses directly into React elements, never dangerouslySetInnerHTML,
+ * line. Parses directly into React elements, never dangerouslySetInnerHTML,
  * so there's no HTML-injection surface regardless of where the content came
  * from (admin, MCP, or — someday — a reader submission).
  */
 function renderMarkdownContent(content: string): ReactNode[] {
-  const lines = content.split("\n");
+  const lines = parseMarkdownLines(content);
   const blocks: ReactNode[] = [];
   let listItems: string[] = [];
   let key = 0;
@@ -40,27 +62,23 @@ function renderMarkdownContent(content: string): ReactNode[] {
   };
 
   for (const line of lines) {
-    if (line.startsWith("- ")) {
-      listItems.push(line.slice(2));
+    if (line.kind === "list") {
+      listItems.push(line.text);
       continue;
     }
     flushList();
 
-    if (line.startsWith("## ")) {
-      blocks.push(<h3 key={`b-${key++}`}>{renderInline(line.slice(3))}</h3>);
-    } else if (line.startsWith("# ")) {
-      blocks.push(<h2 key={`b-${key++}`}>{renderInline(line.slice(2))}</h2>);
-    } else if (line.trim() === "") {
-      continue; // blank lines are just paragraph separators, no empty <p>
-    } else {
-      blocks.push(<p key={`b-${key++}`}>{renderInline(line)}</p>);
-    }
+    if (line.kind === "heading3") blocks.push(<h3 key={`b-${key++}`}>{renderInline(line.text)}</h3>);
+    else if (line.kind === "heading2") blocks.push(<h2 key={`b-${key++}`}>{renderInline(line.text)}</h2>);
+    else if (line.kind === "blank") continue; // blank lines are just paragraph separators, no empty <p>
+    else blocks.push(<p key={`b-${key++}`}>{renderInline(line.text)}</p>);
   }
   flushList();
   return blocks;
 }
 
-function renderInline(text: string): ReactNode[] {
+/** Renders bold/italic inline markup within a single line of text — exported for reuse by the per-paragraph animated translation renderer. */
+export function renderInline(text: string): ReactNode[] {
   const nodes: ReactNode[] = [];
   const pattern = /\*\*(.+?)\*\*|\*(.+?)\*/g;
   let lastIndex = 0;

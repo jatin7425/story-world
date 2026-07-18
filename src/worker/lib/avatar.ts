@@ -1,5 +1,4 @@
 import type { AuthUser, Gender, AvatarGender } from "../types";
-import { isLang } from "./translation-prompt";
 
 export function isGender(value: unknown): value is Gender {
   return value === "male" || value === "female" || value === "other";
@@ -36,8 +35,6 @@ export interface AuthUserRow {
   gender: Gender | null;
   avatar_gender: AvatarGender;
   avatar_seed: number;
-  preferred_lang: string | null;
-  secondary_lang: string | null;
 }
 
 export function toAuthUser(row: AuthUserRow): AuthUser {
@@ -48,7 +45,5 @@ export function toAuthUser(row: AuthUserRow): AuthUser {
     role: row.role,
     gender: row.gender,
     avatar_url: resolveAvatarUrl(row.gender, row.avatar_gender, row.avatar_seed),
-    preferred_lang: isLang(row.preferred_lang) ? row.preferred_lang : null,
-    secondary_lang: isLang(row.secondary_lang) ? row.secondary_lang : null,
   };
 }

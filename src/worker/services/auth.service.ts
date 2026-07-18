@@ -8,7 +8,6 @@ import { hashPassword, verifyPassword, randomToken } from "../lib/auth";
 import { sendMagicLinkEmail } from "../lib/email";
 import { SESSION_TTL_MS } from "../lib/session-cookie";
 import { toAuthUser, randomAvatarGender, randomAvatarSeed, isGender } from "../lib/avatar";
-import { isLang, type Lang } from "../lib/translation-prompt";
 
 const MAGIC_LINK_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
@@ -18,8 +17,6 @@ export interface SignupInput {
   username?: string | null;
   mobile?: string | null;
   gender?: string | null;
-  preferred_lang?: string | null;
-  secondary_lang?: string | null;
 }
 
 export type AuthResult = { user: AuthUser; sessionToken: string } | { error: string; status: 400 | 401 | 403 | 409 };
@@ -64,14 +61,6 @@ export class AuthService {
     if (genderInput !== null && !isGender(genderInput)) return { error: "Invalid gender value", status: 400 };
     const gender = genderInput as Gender | null;
 
-    const preferredLangInput = input.preferred_lang ?? null;
-    if (preferredLangInput !== null && !isLang(preferredLangInput)) return { error: "Invalid preferred language", status: 400 };
-    const preferredLang = preferredLangInput as Lang | null;
-
-    const secondaryLangInput = input.secondary_lang ?? null;
-    if (secondaryLangInput !== null && !isLang(secondaryLangInput)) return { error: "Invalid secondary language", status: 400 };
-    const secondaryLang = secondaryLangInput as Lang | null;
-
     if (input.username) {
       const taken = await this.users.findByUsername(input.username);
       if (taken) return { error: "Username is already taken", status: 409 };
@@ -91,8 +80,6 @@ export class AuthService {
         gender,
         avatarGender: existing.avatar_gender,
         avatarSeed: existing.avatar_seed,
-        preferredLang,
-        secondaryLang,
       });
     } else {
       user = await this.users.createWithPassword({
@@ -103,8 +90,6 @@ export class AuthService {
         gender,
         avatarGender: randomAvatarGender(),
         avatarSeed: randomAvatarSeed(),
-        preferredLang,
-        secondaryLang,
       });
     }
 

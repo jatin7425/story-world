@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, ApiError, type Chapter as ChapterType, type Comment } from "../api";
 import { useAuth } from "../AuthContext";
-import { useLocale } from "../LocaleContext";
-import { LANG_NAMES } from "../langConstants";
 import Breadcrumbs from "../Breadcrumbs";
 import Pagination from "../Pagination";
 import { renderChapterContent } from "../markdown";
@@ -11,7 +9,6 @@ import { renderChapterContent } from "../markdown";
 export default function Chapter() {
   const { slug, number } = useParams<{ slug: string; number: string }>();
   const { user } = useAuth();
-  const { lang } = useLocale();
   const [chapter, setChapter] = useState<ChapterType | null>(null);
   const [likeCount, setLikeCount] = useState(0);
   const [likedByMe, setLikedByMe] = useState(false);
@@ -26,7 +23,6 @@ export default function Chapter() {
   const [storyCoverImageUrl, setStoryCoverImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [notTranslatedInto, setNotTranslatedInto] = useState<string | null>(null);
 
   useEffect(() => {
     if (!slug || !number) return;
@@ -37,40 +33,23 @@ export default function Chapter() {
     setComments([]);
     setCommentsPage(1);
 
-    (async () => {
-      try {
-        let r = await api.getChapter(slug, Number(number), lang === "en" ? undefined : lang);
-        let shownLang = lang;
-
-        // Requested language isn't cached yet — try the account's secondary
-        // language (if set and different) before falling back to English.
-        if (!r.translationAvailable && lang !== "en") {
-          const secondary = user?.secondary_lang;
-          if (secondary && secondary !== lang && secondary !== "en") {
-            const retry = await api.getChapter(slug, Number(number), secondary);
-            if (retry.translationAvailable) {
-              r = retry;
-              shownLang = secondary;
-            }
-          }
-        }
-
+    api
+      .getChapter(slug, Number(number))
+      .then((r) => {
         setChapter(r.chapter);
         setLikeCount(r.likeCount);
         setLikedByMe(r.likedByMe);
         setNextChapterNumber(r.nextChapterNumber);
         setStoryTitle(r.storyTitle);
         setStoryCoverImageUrl(r.storyCoverImageUrl);
-        setNotTranslatedInto(!r.translationAvailable && shownLang !== "en" ? LANG_NAMES[shownLang] : null);
-      } catch (err) {
+      })
+      .catch((err) => {
         if (err instanceof ApiError && err.locked) setLocked(true);
         else if (err instanceof ApiError && err.status === 404) setNotFound(true);
         else throw err;
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [slug, number, lang]);
+      })
+      .finally(() => setLoading(false));
+  }, [slug, number]);
 
   useEffect(() => {
     if (!chapter) return;
@@ -146,9 +125,6 @@ export default function Chapter() {
           { label: `Chapter ${chapter.chapter_number}` },
         ]}
       />
-      {notTranslatedInto && (
-        <p className="translation-note">Not translated into {notTranslatedInto} yet — showing English.</p>
-      )}
       <h1>
         Chapter {chapter.chapter_number}
         {chapter.title ? `: ${chapter.title}` : ""}

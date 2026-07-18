@@ -3,8 +3,6 @@ import type { IChaptersRepository } from "../repositories/chapters.repository";
 import type { ILikesRepository } from "../repositories/likes.repository";
 import type { IRestrictionsRepository } from "../repositories/restrictions.repository";
 import type { ChapterRow } from "../repositories/types";
-import type { TranslationService } from "./translation.service";
-import { isSupportedLang, type Lang } from "../lib/translation-prompt";
 
 export type ChapterResult =
   | { kind: "not_found" }
@@ -17,8 +15,6 @@ export type ChapterResult =
       likeCount: number;
       likedByMe: boolean;
       nextChapterNumber: number | null;
-      translationLang: Lang;
-      translationAvailable: boolean;
     };
 
 export class ChapterService {
@@ -26,16 +22,10 @@ export class ChapterService {
     private readonly stories: IStoriesRepository,
     private readonly chapters: IChaptersRepository,
     private readonly likes: ILikesRepository,
-    private readonly restrictions: IRestrictionsRepository,
-    private readonly translations: TranslationService
+    private readonly restrictions: IRestrictionsRepository
   ) {}
 
-  async getChapter(
-    slug: string,
-    chapterNumber: number,
-    currentUserId: number | null,
-    lang: string = "en"
-  ): Promise<ChapterResult> {
+  async getChapter(slug: string, chapterNumber: number, currentUserId: number | null): Promise<ChapterResult> {
     const story = await this.stories.findPublishedBySlug(slug);
     if (!story) return { kind: "not_found" };
 
@@ -57,33 +47,14 @@ export class ChapterService {
       this.chapters.findNextChapterNumber(story.id, chapterNumber),
     ]);
 
-    // Pure cache read — never triggers a live translation (see TranslationService).
-    let translatedChapter = chapter;
-    let translationAvailable = true;
-    if (isSupportedLang(lang)) {
-      const translation = await this.translations.findChapterTranslation(chapter.id, lang);
-      if (translation) {
-        translatedChapter = {
-          ...chapter,
-          title: translation.title,
-          content: translation.content,
-          content_format: translation.content_format,
-        };
-      } else {
-        translationAvailable = false;
-      }
-    }
-
     return {
       kind: "ok",
-      chapter: translatedChapter,
+      chapter,
       storyTitle: story.title,
       storyCoverImageUrl: story.cover_image_url,
       likeCount,
       likedByMe,
       nextChapterNumber,
-      translationLang: translationAvailable && isSupportedLang(lang) ? lang : "en",
-      translationAvailable,
     };
   }
 

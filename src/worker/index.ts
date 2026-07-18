@@ -9,12 +9,11 @@ import { adminStoriesRoutes } from "./routes/admin-stories";
 import { adminUsersRoutes } from "./routes/admin-users";
 import { adminMcpRoutes } from "./routes/admin-mcp";
 import { adminImagesRoutes } from "./routes/admin-images";
-import { adminTranslationJobsRoutes } from "./routes/admin-translation-jobs";
+import { adminAgeRatingRoutes } from "./routes/admin-age-rating";
 import { profileRoutes } from "./routes/profile";
 import { mcpRoutes } from "./routes/mcp";
 import { imagesRoutes } from "./routes/images";
 import { oauthRoutes, oauthWellKnownRoutes } from "./routes/oauth";
-import { localeRoutes } from "./routes/locale";
 import { defaultMeta, servePageWithMeta, truncateForDescription } from "./lib/seo";
 
 const app = new Hono<AppEnv>();
@@ -33,13 +32,12 @@ app.route("/api/admin", adminStoriesRoutes);
 app.route("/api/admin", adminUsersRoutes);
 app.route("/api/admin/mcp", adminMcpRoutes);
 app.route("/api/admin", adminImagesRoutes);
-app.route("/api/admin", adminTranslationJobsRoutes);
+app.route("/api/admin", adminAgeRatingRoutes);
 app.route("/api/profile", profileRoutes);
 app.route("/mcp", mcpRoutes);
 app.route("/images", imagesRoutes);
 app.route("/oauth", oauthRoutes);
 app.route("/.well-known", oauthWellKnownRoutes);
-app.route("/api", localeRoutes);
 
 // HTML page routes below get per-page <title>/meta/OG tags injected into the
 // SPA shell for search + social-share previews. Everything else (login,

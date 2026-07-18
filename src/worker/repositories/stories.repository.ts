@@ -1,7 +1,8 @@
 import type { StoryRow } from "./types";
 
 const STORY_COLUMNS = `id, title, slug, description, cover_image_url, author_id, status,
-                        free_chapter_count, is_ai_generated, ai_generation_prompt, tags, created_via, lang, created_at`;
+                        free_chapter_count, is_ai_generated, ai_generation_prompt, tags, created_via,
+                        age_rating, age_rating_reason, age_rating_source, created_at`;
 
 export interface CreateStoryInput {
   title: string;
@@ -40,12 +41,7 @@ export interface IStoriesRepository {
   delete(id: number): Promise<void>;
   /** Word-wise match across title/description/tags — every word in the query must appear somewhere. */
   search(words: string[], limit: number, offset: number): Promise<StoryPage>;
-  /** Dedupe-appends a lang code to the comma-separated `lang` column (e.g. after a translation job succeeds). */
-  addLang(id: number, lang: string): Promise<void>;
-  /** Resets `lang` back to just "en" (e.g. after the source title/description was edited, invalidating cached translations). */
-  resetLang(id: number): Promise<void>;
-  /** Removes a single lang code (e.g. after an admin deletes just that one cached translation). */
-  removeLang(id: number, lang: string): Promise<void>;
+  updateAgeRating(id: number, ageRating: string, reason: string | null, source: "ai" | "admin"): Promise<StoryRow | null>;
 }
 
 export class StoriesRepository implements IStoriesRepository {
@@ -181,25 +177,11 @@ export class StoriesRepository implements IStoriesRepository {
     return { items: results, total: countRow?.count ?? 0 };
   }
 
-  async addLang(id: number, lang: string): Promise<void> {
-    const row = await this.db.prepare("SELECT lang FROM stories WHERE id = ?").bind(id).first<{ lang: string }>();
-    if (!row) return;
-    const langs = new Set(row.lang.split(",").filter(Boolean));
-    if (langs.has(lang)) return;
-    langs.add(lang);
-    await this.db.prepare("UPDATE stories SET lang = ? WHERE id = ?").bind([...langs].join(","), id).run();
-  }
-
-  async resetLang(id: number): Promise<void> {
-    await this.db.prepare("UPDATE stories SET lang = 'en' WHERE id = ?").bind(id).run();
-  }
-
-  async removeLang(id: number, lang: string): Promise<void> {
-    const row = await this.db.prepare("SELECT lang FROM stories WHERE id = ?").bind(id).first<{ lang: string }>();
-    if (!row) return;
-    const langs = new Set(row.lang.split(",").filter(Boolean));
-    langs.delete(lang);
-    langs.add("en"); // "en" is the source language, always implicitly available
-    await this.db.prepare("UPDATE stories SET lang = ? WHERE id = ?").bind([...langs].join(","), id).run();
+  async updateAgeRating(id: number, ageRating: string, reason: string | null, source: "ai" | "admin"): Promise<StoryRow | null> {
+    const row = await this.db
+      .prepare(`UPDATE stories SET age_rating = ?, age_rating_reason = ?, age_rating_source = ? WHERE id = ? RETURNING ${STORY_COLUMNS}`)
+      .bind(ageRating, reason, source, id)
+      .first<StoryRow>();
+    return row ?? null;
   }
 }

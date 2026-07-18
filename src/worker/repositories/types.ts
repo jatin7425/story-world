@@ -1,3 +1,5 @@
+export type AgeRating = "all" | "13+" | "16+" | "18+";
+
 export interface StoryRow {
   id: number;
   title: string;
@@ -11,7 +13,9 @@ export interface StoryRow {
   ai_generation_prompt: string | null;
   tags: string | null;
   created_via: "admin" | "mcp";
-  lang: string; // comma-separated, e.g. "en,hi,ja" — see 0015 migration
+  age_rating: AgeRating | null;
+  age_rating_reason: string | null;
+  age_rating_source: "ai" | "admin" | null;
   created_at: string;
 }
 
@@ -28,7 +32,6 @@ export interface ChapterRow {
   generated_by: string;
   status: ChapterStatus;
   image_url: string | null;
-  lang: string; // comma-separated, e.g. "en,hi,ja" — see 0015 migration
   created_at: string;
 }
 
@@ -39,53 +42,7 @@ export interface ChapterSummaryRow {
   status: ChapterStatus;
   generated_by: string;
   image_url: string | null;
-  lang: string;
   created_at: string;
-}
-
-export interface StoryTranslationRow {
-  id: number;
-  story_id: number;
-  lang: string;
-  title: string;
-  description: string | null;
-  created_at: string;
-}
-
-export interface ChapterTranslationRow {
-  id: number;
-  chapter_id: number;
-  lang: string;
-  title: string | null;
-  content: string;
-  content_format: ChapterContentFormat;
-  created_at: string;
-}
-
-export type TranslationJobStatus = "running" | "completed" | "failed";
-export type TranslationJobItemStatus = "pending" | "running" | "done" | "failed";
-export type TranslationEntityType = "story" | "chapter";
-
-export interface TranslationJobRow {
-  id: number;
-  created_by: number;
-  status: TranslationJobStatus;
-  total_items: number;
-  completed_items: number;
-  created_at: string;
-}
-
-export interface TranslationJobItemRow {
-  id: number;
-  job_id: number;
-  entity_type: TranslationEntityType;
-  entity_id: number;
-  entity_label: string;
-  lang: string;
-  status: TranslationJobItemStatus;
-  provider_used: string | null;
-  log: string;
-  error_message: string | null;
 }
 
 export interface CommentRow {
@@ -126,8 +83,6 @@ export interface UserRow {
   gender: "male" | "female" | "other" | null;
   avatar_gender: "male" | "female";
   avatar_seed: number;
-  preferred_lang: string | null;
-  secondary_lang: string | null;
   created_at: string;
 }
 

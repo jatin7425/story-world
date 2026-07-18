@@ -3,24 +3,19 @@ import type { IChaptersRepository } from "../repositories/chapters.repository";
 import type { IFollowsRepository } from "../repositories/follows.repository";
 import type { StoryRow, ChapterSummaryRow } from "../repositories/types";
 import { toPaginated, type Paginated } from "../lib/pagination";
-import type { TranslationService } from "./translation.service";
-import { isSupportedLang, type Lang } from "../lib/translation-prompt";
 
 export interface StoryDetail {
   story: StoryRow;
   chapters: Paginated<ChapterSummaryRow>;
   followersCount: number;
   isFollowing: boolean;
-  translationLang: Lang;
-  translationAvailable: boolean;
 }
 
 export class StoryService {
   constructor(
     private readonly stories: IStoriesRepository,
     private readonly chapters: IChaptersRepository,
-    private readonly follows: IFollowsRepository,
-    private readonly translations: TranslationService
+    private readonly follows: IFollowsRepository
   ) {}
 
   async listStories(page: number, limit: number, query?: string): Promise<Paginated<StoryRow>> {
@@ -40,8 +35,7 @@ export class StoryService {
     slug: string,
     currentUserId: number | null,
     chapterPage: number,
-    chapterLimit: number,
-    lang: string = "en"
+    chapterLimit: number
   ): Promise<StoryDetail | null> {
     const story = await this.stories.findPublishedBySlug(slug);
     if (!story) return null;
@@ -53,25 +47,11 @@ export class StoryService {
       currentUserId ? this.follows.isFollowing(currentUserId, story.id) : Promise.resolve(false),
     ]);
 
-    // Pure cache read — never triggers a live translation (see TranslationService).
-    let translatedStory = story;
-    let translationAvailable = true;
-    if (isSupportedLang(lang)) {
-      const translation = await this.translations.findStoryTranslation(story.id, lang);
-      if (translation) {
-        translatedStory = { ...story, title: translation.title, description: translation.description };
-      } else {
-        translationAvailable = false;
-      }
-    }
-
     return {
-      story: translatedStory,
+      story,
       chapters: toPaginated(chapterPageResult.items, chapterPageResult.total, chapterPage, chapterLimit),
       followersCount,
       isFollowing,
-      translationLang: translationAvailable && isSupportedLang(lang) ? lang : "en",
-      translationAvailable,
     };
   }
 

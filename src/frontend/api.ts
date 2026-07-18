@@ -37,7 +37,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export type Gender = "male" | "female" | "other";
-export type Lang = "en" | "hi" | "ja" | "ko" | "hinglish";
+export type AgeRating = "all" | "13+" | "16+" | "18+";
 
 export interface User {
   id: number;
@@ -46,8 +46,6 @@ export interface User {
   role: "reader" | "author" | "admin";
   gender: Gender | null;
   avatar_url: string;
-  preferred_lang: Lang | null;
-  secondary_lang: Lang | null;
 }
 
 export interface Story {
@@ -60,7 +58,9 @@ export interface Story {
   status: string;
   tags: string | null;
   created_via: "admin" | "mcp";
-  lang: string;
+  age_rating: AgeRating | null;
+  age_rating_reason: string | null;
+  age_rating_source: "ai" | "admin" | null;
   created_at: string;
 }
 
@@ -75,7 +75,6 @@ export interface ChapterSummary {
   status: ChapterStatus;
   generated_by: ContentSource;
   image_url: string | null;
-  lang: string;
   created_at: string;
 }
 
@@ -87,7 +86,6 @@ export interface Chapter {
   content_format: ChapterContentFormat;
   status: ChapterStatus;
   image_url: string | null;
-  lang: string;
 }
 
 export interface AdminChapter {
@@ -142,41 +140,6 @@ export interface McpToken {
   last_used_at: string | null;
 }
 
-export type TranslationJobStatus = "running" | "completed" | "failed";
-export type TranslationJobItemStatus = "pending" | "running" | "done" | "failed";
-
-export interface TranslationJob {
-  id: number;
-  status: TranslationJobStatus;
-  total_items: number;
-  completed_items: number;
-}
-
-export interface TranslationJobItem {
-  id: number;
-  job_id: number;
-  entity_type: "story" | "chapter";
-  entity_id: number;
-  entity_label: string;
-  lang: string;
-  status: TranslationJobItemStatus;
-  provider_used: string | null;
-  log: string;
-  error_message: string | null;
-}
-
-export interface TranslationJobWithItems {
-  job: TranslationJob;
-  items: TranslationJobItem[];
-}
-
-export interface TranslationJobStepResult {
-  item: TranslationJobItem;
-  completedItems: number;
-  totalItems: number;
-  jobStatus: TranslationJobStatus;
-}
-
 export interface StoryEditInput {
   title?: string;
   description?: string | null;
@@ -210,15 +173,13 @@ export const api = {
     username?: string;
     mobile?: string;
     gender?: Gender;
-    preferred_lang?: Lang;
-    secondary_lang?: Lang;
   }) => request<{ user: User }>("/auth/signup", { method: "POST", body: JSON.stringify(input) }),
   login: (email: string, password: string) =>
     request<{ user: User }>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
 
   listStories: (query?: string, page?: number) =>
     request<{ stories: Story[] } & PageMeta>(`/api/stories${qs({ q: query, page })}`),
-  getStory: (slug: string, chapterPage?: number, lang?: Lang) =>
+  getStory: (slug: string, chapterPage?: number) =>
     request<{
       story: Story;
       chapters: ChapterSummary[];
@@ -228,13 +189,11 @@ export const api = {
       followersCount: number;
       isFollowing: boolean;
       isLoggedIn: boolean;
-      translationLang: Lang;
-      translationAvailable: boolean;
-    }>(`/api/stories/${slug}${qs({ page: chapterPage, lang })}`),
+    }>(`/api/stories/${slug}${qs({ page: chapterPage })}`),
   follow: (slug: string) => request<{ ok: true }>(`/api/stories/${slug}/follow`, { method: "POST" }),
   unfollow: (slug: string) => request<{ ok: true }>(`/api/stories/${slug}/follow`, { method: "DELETE" }),
 
-  getChapter: (slug: string, number: number, lang?: Lang) =>
+  getChapter: (slug: string, number: number) =>
     request<{
       chapter: Chapter;
       storyTitle: string;
@@ -242,9 +201,7 @@ export const api = {
       likeCount: number;
       likedByMe: boolean;
       nextChapterNumber: number | null;
-      translationLang: Lang;
-      translationAvailable: boolean;
-    }>(`/api/stories/${slug}/chapters/${number}${qs({ lang })}`),
+    }>(`/api/stories/${slug}/chapters/${number}`),
   like: (chapterId: number) => request<{ ok: true }>(`/api/chapters/${chapterId}/like`, { method: "POST" }),
   unlike: (chapterId: number) =>
     request<{ ok: true }>(`/api/chapters/${chapterId}/like`, { method: "DELETE" }),
@@ -271,19 +228,11 @@ export const api = {
     }>(`/api/profile${qs({ followed_page: followedPage, comments_page: commentsPage })}`),
   updateGender: (gender: Gender | null) =>
     request<{ user: User }>("/api/profile/gender", { method: "PATCH", body: JSON.stringify({ gender }) }),
-  updateLanguagePrefs: (preferredLang: Lang | null, secondaryLang: Lang | null) =>
-    request<{ user: User }>("/api/profile/language", {
-      method: "PATCH",
-      body: JSON.stringify({ preferred_lang: preferredLang, secondary_lang: secondaryLang }),
-    }),
   changePassword: (currentPassword: string, newPassword: string) =>
     request<{ ok: true }>("/api/profile/password", {
       method: "PATCH",
       body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
     }),
-
-  // --- Locale ---
-  getLocale: () => request<{ suggestedLang: string; country: string | null }>("/api/locale"),
 
   // --- Admin: stories/chapters ---
   adminListStories: (page?: number, limit?: number) =>
@@ -370,16 +319,11 @@ export const api = {
   },
   adminDeleteImage: (id: number) => request<{ ok: true }>(`/api/admin/images/${id}`, { method: "DELETE" }),
 
-  // --- Admin: translation jobs ---
-  createTranslationJob: (input: { storyId: number; chapterIds: number[]; includeStory: boolean; langs: Lang[] }) =>
-    request<TranslationJobWithItems>("/api/admin/translation-jobs", { method: "POST", body: JSON.stringify(input) }),
-  stepTranslationJob: (jobId: number) =>
-    request<{ done: true } | TranslationJobStepResult>(`/api/admin/translation-jobs/${jobId}/step`, { method: "POST" }),
-  getTranslationJob: (jobId: number) => request<TranslationJobWithItems>(`/api/admin/translation-jobs/${jobId}`),
-  deleteStoryTranslation: (storyId: number, lang: Lang) =>
-    request<{ ok: true }>(`/api/admin/translation-jobs/translations/story/${storyId}/${lang}`, { method: "DELETE" }),
-  deleteChapterTranslation: (chapterId: number, lang: Lang) =>
-    request<{ ok: true }>(`/api/admin/translation-jobs/translations/chapter/${chapterId}/${lang}`, { method: "DELETE" }),
+  // --- Admin: age rating ---
+  classifyStoryAgeRating: (storyId: number) =>
+    request<{ story: Story }>(`/api/admin/stories/${storyId}/age-rating/classify`, { method: "POST" }),
+  setStoryAgeRating: (storyId: number, rating: AgeRating) =>
+    request<{ story: Story }>(`/api/admin/stories/${storyId}/age-rating`, { method: "PATCH", body: JSON.stringify({ rating }) }),
 
   // --- OAuth consent screen (for the /oauth/authorize page) ---
   getOAuthClient: (clientId: string) =>

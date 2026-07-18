@@ -35,23 +35,6 @@ profileRoutes.patch("/gender", async (c) => {
   return c.json({ user: result });
 });
 
-profileRoutes.patch("/language", async (c) => {
-  const user = await getCurrentUser(c);
-  if (!user) return c.json({ error: "Login required" }, 401);
-
-  const { preferred_lang, secondary_lang } = await c.req.json<{
-    preferred_lang?: string | null;
-    secondary_lang?: string | null;
-  }>();
-  const result = await c.get("services").profileService.updateLanguagePrefs(
-    user.id,
-    preferred_lang ?? null,
-    secondary_lang ?? null
-  );
-  if ("error" in result) return c.json(result, 400);
-  return c.json({ user: result });
-});
-
 profileRoutes.patch("/password", async (c) => {
   const user = await getCurrentUser(c);
   if (!user) return c.json({ error: "Login required" }, 401);

@@ -186,26 +186,6 @@ a {
   color: var(--accent) !important;
 }
 
-.lang-switcher {
-  height: 2.1rem;
-  flex-shrink: 0;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 999px;
-  padding: 0 0.6rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.lang-switcher:hover {
-  border-color: var(--accent);
-}
-.lang-switcher-drawer {
-  width: 100%;
-  height: 2.6rem;
-}
-
 /* Mobile hamburger + slide-out drawer (hidden on desktop) */
 .menu-toggle {
   display: none;
@@ -780,6 +760,36 @@ label {
   font-size: 0.78rem;
   white-space: nowrap;
 }
+
+/* AI/admin-assigned content rating — informational disclosure, not an
+   access gate (the site doesn't collect reader age). */
+.age-rating-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  padding: 0.15rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-left: 0.6rem;
+  vertical-align: middle;
+}
+.age-rating-all {
+  background: rgba(111, 201, 154, 0.15);
+  color: var(--success);
+}
+.age-rating-13plus {
+  background: rgba(91, 127, 255, 0.15);
+  color: #5b7fff;
+}
+.age-rating-16plus {
+  background: rgba(230, 160, 60, 0.18);
+  color: #e6a03c;
+}
+.age-rating-18plus {
+  background: rgba(227, 100, 100, 0.18);
+  color: var(--danger);
+}
 .story-page .story-banner-body {
   grid-column: 2;
   grid-row: 3;
@@ -918,16 +928,6 @@ label {
   font-size: 0.85em;
   white-space: nowrap;
   flex-shrink: 0;
-}
-
-.translation-note {
-  background: var(--bg-sunken);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  padding: 0.5rem 0.85rem;
-  margin: 0 0 1rem;
 }
 
 /* Chapter reading page */

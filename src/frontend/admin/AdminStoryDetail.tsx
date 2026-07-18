@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { api, type Story, type Lang } from "../api";
-import { LANG_NAMES } from "../langConstants";
+import { api, type Story, type AgeRating } from "../api";
 import { ADMIN_PATH } from "../adminPath";
 import StoryEditForm from "./StoryEditForm";
 import StoryChapters from "./StoryChapters";
 import Modal from "./Modal";
+
+const RATINGS: AgeRating[] = ["all", "13+", "16+", "18+"];
 
 export default function AdminStoryDetail() {
   const { id } = useParams<{ id: string }>();
@@ -14,6 +15,8 @@ export default function AdminStoryDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEdit, setShowEdit] = useState(false);
+  const [classifying, setClassifying] = useState(false);
+  const [ratingError, setRatingError] = useState<string | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -27,10 +30,27 @@ export default function AdminStoryDetail() {
 
   useEffect(load, [storyId]);
 
-  const deleteStoryTranslation = async (lang: Lang) => {
-    if (!confirm(`Delete the ${LANG_NAMES[lang]} translation of this story's description? A future translation job will regenerate it.`)) return;
-    await api.deleteStoryTranslation(storyId, lang);
-    load();
+  const classifyWithAi = async () => {
+    setRatingError(null);
+    setClassifying(true);
+    try {
+      const { story: updated } = await api.classifyStoryAgeRating(storyId);
+      setStory(updated);
+    } catch (err) {
+      setRatingError(err instanceof Error ? err.message : "Failed to classify story");
+    } finally {
+      setClassifying(false);
+    }
+  };
+
+  const setManualRating = async (rating: AgeRating) => {
+    setRatingError(null);
+    try {
+      const { story: updated } = await api.setStoryAgeRating(storyId, rating);
+      setStory(updated);
+    } catch (err) {
+      setRatingError(err instanceof Error ? err.message : "Failed to set rating");
+    }
   };
 
   if (loading) {
@@ -79,27 +99,30 @@ export default function AdminStoryDetail() {
           <dd>{story.free_chapter_count}</dd>
           <dt>Cover image</dt>
           <dd>{story.cover_image_url || <span className="admin-empty">Not set</span>}</dd>
-          <dt>Translations</dt>
+          <dt>Age rating</dt>
           <dd>
-            <div className="admin-lang-chip-row">
-              {story.lang
-                .split(",")
-                .filter((l): l is Lang => l !== "en" && l !== "")
-                .map((l) => (
-                  <span key={l} className="admin-lang-chip">
-                    {LANG_NAMES[l]}
-                    <button
-                      type="button"
-                      onClick={() => deleteStoryTranslation(l)}
-                      aria-label={`Delete ${LANG_NAMES[l]} translation`}
-                      title={`Delete ${LANG_NAMES[l]} translation`}
-                    >
-                      ×
-                    </button>
-                  </span>
+            <div className="admin-row-actions">
+              <select value={story.age_rating ?? ""} onChange={(e) => e.target.value && setManualRating(e.target.value as AgeRating)}>
+                <option value="" disabled>
+                  Not set
+                </option>
+                {RATINGS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
                 ))}
-              {story.lang === "en" && <span className="admin-empty">None yet</span>}
+              </select>
+              <button type="button" className="admin-btn-ghost" onClick={classifyWithAi} disabled={classifying}>
+                {classifying ? "Classifying…" : "Classify with AI"}
+              </button>
+              {story.age_rating_source && (
+                <span className="admin-empty">
+                  ({story.age_rating_source === "ai" ? "AI-suggested" : "admin override"})
+                </span>
+              )}
             </div>
+            {story.age_rating_reason && <p className="admin-user-email">{story.age_rating_reason}</p>}
+            {ratingError && <p className="error">{ratingError}</p>}
           </dd>
         </dl>
       </div>

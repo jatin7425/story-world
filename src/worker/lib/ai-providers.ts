@@ -1,14 +1,12 @@
 /**
- * D1 rejects a single column value beyond ~1MB (SQLITE_TOOBIG) — see
- * images.repository.ts for the same constraint on image blobs. Translation
- * output is plain text, far smaller, but we still cap what we'll accept from
- * a provider defensively.
+ * General-purpose LLM provider chain — currently used for age-rating
+ * classification only (see services/age-rating.service.ts). Translation no
+ * longer uses this; it calls Google Translate directly (lib/google-translate.ts).
  */
-const MAX_OUTPUT_CHARS = 200_000;
 
-/** Thrown specifically when a provider refuses on content-policy/safety
- * grounds (as opposed to a quota, network, or generic error) — this is the
- * ONLY failure reason that unlocks the Aion fallback (see translateViaProviders). */
+const MAX_OUTPUT_CHARS = 2_000;
+
+/** Thrown when a provider refuses on content-policy/safety grounds rather than a quota/network/generic error — the only failure reason that unlocks the Aion fallback. */
 export class PolicyRefusalError extends Error {}
 
 export interface ProviderAttempt {
@@ -24,17 +22,12 @@ export interface ProviderResult {
   attempts: ProviderAttempt[];
 }
 
-export interface TranslationProvider {
+export interface AiProvider {
   name: string;
-  /** Throws (Error or PolicyRefusalError) on total failure for this provider. */
-  translate(systemPrompt: string, userText: string): Promise<string>;
+  /** Throws (Error or PolicyRefusalError) on total failure. */
+  complete(systemPrompt: string, userText: string): Promise<string>;
 }
 
-// A handful of stock refusal openers that show up across providers when a
-// model declines on safety/policy grounds rather than actually translating.
-// Used as a fallback signal alongside each provider's structured
-// finish_reason/blockReason field, since not every provider exposes one
-// reliably through every response shape.
 const REFUSAL_PATTERNS = [
   /^i('m| am) (sorry|unable)/i,
   /^i can('t|not)/i,
@@ -54,20 +47,25 @@ function truncateOutput(text: string): string {
   return text.length > MAX_OUTPUT_CHARS ? text.slice(0, MAX_OUTPUT_CHARS) : text;
 }
 
-const TRANSLATION_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8" as const;
+// 70B, not the smaller/cheaper 8B — age-rating classification is
+// admin-triggered and low-volume (once per story, not once per reader
+// request the way translation used to be), so the larger model's higher
+// neuron cost against the free daily Workers AI allowance isn't a real
+// concern here the way it was for translation.
+const WORKERS_AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast" as const;
 
-export class WorkersAiProvider implements TranslationProvider {
+export class WorkersAiProvider implements AiProvider {
   name = "workers-ai";
   constructor(private readonly ai: Ai) {}
 
-  async translate(systemPrompt: string, userText: string): Promise<string> {
-    const result = await this.ai.run(TRANSLATION_MODEL, {
+  async complete(systemPrompt: string, userText: string): Promise<string> {
+    const result = await this.ai.run(WORKERS_AI_MODEL, {
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userText },
       ],
-      max_tokens: 4096,
-      temperature: 0.4,
+      max_tokens: 512,
+      temperature: 0.2,
     });
     const text = (result as { response?: string }).response?.trim();
     if (!text) throw new Error("Workers AI returned an empty response");
@@ -78,11 +76,11 @@ export class WorkersAiProvider implements TranslationProvider {
 
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 
-export class GroqProvider implements TranslationProvider {
+export class GroqProvider implements AiProvider {
   name = "groq";
   constructor(private readonly apiKeys: string[]) {}
 
-  async translate(systemPrompt: string, userText: string): Promise<string> {
+  async complete(systemPrompt: string, userText: string): Promise<string> {
     if (this.apiKeys.length === 0) throw new Error("No Groq API keys configured");
 
     let lastError: Error = new Error("Groq: no keys attempted");
@@ -98,14 +96,14 @@ export class GroqProvider implements TranslationProvider {
               { role: "system", content: systemPrompt },
               { role: "user", content: userText },
             ],
-            temperature: 0.4,
-            max_tokens: 4096,
+            temperature: 0.2,
+            max_tokens: 512,
           }),
         });
 
         if (res.status === 429) {
           lastError = new Error(`key ${i + 1}: rate limited (429)`);
-          continue; // next key
+          continue;
         }
         if (!res.ok) {
           const body = await res.text().catch(() => "");
@@ -136,13 +134,13 @@ export class GroqProvider implements TranslationProvider {
   }
 }
 
-const GEMINI_MODEL = "gemini-2.0-flash";
+const GEMINI_MODEL = "gemini-2.5-pro"; // Pro tier, not Flash — matches the "70B and above" bar on the other providers
 
-export class GeminiProvider implements TranslationProvider {
+export class GeminiProvider implements AiProvider {
   name = "gemini";
   constructor(private readonly apiKeys: string[]) {}
 
-  async translate(systemPrompt: string, userText: string): Promise<string> {
+  async complete(systemPrompt: string, userText: string): Promise<string> {
     if (this.apiKeys.length === 0) throw new Error("No Gemini API keys configured");
 
     let lastError: Error = new Error("Gemini: no keys attempted");
@@ -157,7 +155,7 @@ export class GeminiProvider implements TranslationProvider {
             body: JSON.stringify({
               systemInstruction: { parts: [{ text: systemPrompt }] },
               contents: [{ role: "user", parts: [{ text: userText }] }],
-              generationConfig: { temperature: 0.4, maxOutputTokens: 4096 },
+              generationConfig: { temperature: 0.2, maxOutputTokens: 512 },
             }),
           }
         );
@@ -200,20 +198,18 @@ export class GeminiProvider implements TranslationProvider {
 }
 
 // Aion is a last-resort fallback only ever reached when an earlier provider
-// (Workers AI/Groq/Gemini) refused on policy/safety grounds — see
-// translateViaProviders. Its API shape here follows the OpenAI-compatible
-// chat-completions convention most third-party inference providers expose,
-// which is a best-effort guess: verify the base URL/model id/payload shape
-// against Aion's actual docs before relying on this in production, and
-// adjust the endpoint/model constants below if they differ.
+// refused on policy/safety grounds — mature-content classification is
+// exactly the case where a safety-conscious model might refuse to even
+// analyze the text. Endpoint/model here are a best-effort guess at Aion's
+// OpenAI-compatible API shape — verify against their actual docs.
 const AION_BASE_URL = "https://api.aionlabs.ai/v1/chat/completions";
 const AION_MODEL = "aion-1.0";
 
-export class AionProvider implements TranslationProvider {
+export class AionProvider implements AiProvider {
   name = "aion";
   constructor(private readonly apiKeys: string[]) {}
 
-  async translate(systemPrompt: string, userText: string): Promise<string> {
+  async complete(systemPrompt: string, userText: string): Promise<string> {
     if (this.apiKeys.length === 0) throw new Error("No Aion API keys configured");
 
     let lastError: Error = new Error("Aion: no keys attempted");
@@ -229,8 +225,8 @@ export class AionProvider implements TranslationProvider {
               { role: "system", content: systemPrompt },
               { role: "user", content: userText },
             ],
-            temperature: 0.4,
-            max_tokens: 4096,
+            temperature: 0.2,
+            max_tokens: 512,
           }),
         });
 
@@ -259,27 +255,19 @@ export class AionProvider implements TranslationProvider {
   }
 }
 
-/**
- * Runs the provider chain in order (normally [WorkersAI, Groq, Gemini]),
- * first success wins. `aion`, if configured, is invoked ONLY when at least
- * one of the earlier providers failed specifically with a PolicyRefusalError
- * — it's a targeted escape valve for content a mainstream model refuses on
- * safety grounds (this platform carries dark-fantasy/horror-tagged fiction
- * that can trip generic safety filters despite being legitimate content),
- * not a general 4th fallback for quota/network failures.
- */
-export async function translateViaProviders(
-  providers: TranslationProvider[],
+/** Runs providers in order, first success wins; `aion` is only tried if an earlier provider hit a PolicyRefusalError. */
+export async function callViaProviders(
+  providers: AiProvider[],
   systemPrompt: string,
   text: string,
-  aion?: TranslationProvider
+  aion?: AiProvider
 ): Promise<ProviderResult> {
   const attempts: ProviderAttempt[] = [];
   let sawPolicyRefusal = false;
 
   for (const provider of providers) {
     try {
-      const result = await provider.translate(systemPrompt, text);
+      const result = await provider.complete(systemPrompt, text);
       attempts.push({ provider: provider.name, ok: true });
       return { text: result, provider: provider.name, attempts };
     } catch (err) {
@@ -296,21 +284,16 @@ export async function translateViaProviders(
 
   if (sawPolicyRefusal && aion) {
     try {
-      const result = await aion.translate(systemPrompt, text);
+      const result = await aion.complete(systemPrompt, text);
       attempts.push({ provider: aion.name, ok: true });
       return { text: result, provider: aion.name, attempts };
     } catch (err) {
-      attempts.push({
-        provider: aion.name,
-        ok: false,
-        error: err instanceof Error ? err.message : String(err),
-        reason: "other",
-      });
+      attempts.push({ provider: aion.name, ok: false, error: err instanceof Error ? err.message : String(err), reason: "other" });
     }
   }
 
   const summary = attempts.map((a) => `${a.provider}: ${a.ok ? "ok" : a.error}`).join(" | ");
-  throw new Error(`All translation providers failed — ${summary}`);
+  throw new Error(`All AI providers failed — ${summary}`);
 }
 
 function classifyError(err: unknown): ProviderAttempt["reason"] {

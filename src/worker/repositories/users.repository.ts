@@ -1,8 +1,8 @@
 import type { UserRow } from "./types";
-import type { AvatarGender, Gender, Lang } from "../types";
+import type { AvatarGender, Gender } from "../types";
 
 const USER_COLUMNS =
-  "id, email, display_name, role, password_hash, username, mobile, gender, avatar_gender, avatar_seed, preferred_lang, secondary_lang, created_at";
+  "id, email, display_name, role, password_hash, username, mobile, gender, avatar_gender, avatar_seed, created_at";
 
 export interface CreatePasswordUserInput {
   email: string;
@@ -12,8 +12,6 @@ export interface CreatePasswordUserInput {
   gender: Gender | null;
   avatarGender: AvatarGender;
   avatarSeed: number;
-  preferredLang: Lang | null;
-  secondaryLang: Lang | null;
 }
 
 export interface UserPage {
@@ -30,7 +28,6 @@ export interface IUsersRepository {
   attachPassword(userId: number, input: CreatePasswordUserInput): Promise<UserRow>;
   updateGender(userId: number, gender: Gender | null, avatarSeed: number): Promise<UserRow>;
   updatePassword(userId: number, passwordHash: string): Promise<UserRow>;
-  updateLanguagePrefs(userId: number, preferredLang: Lang | null, secondaryLang: Lang | null): Promise<UserRow>;
   listAll(limit: number, offset: number): Promise<UserPage>;
 }
 
@@ -79,8 +76,8 @@ export class UsersRepository implements IUsersRepository {
   async createWithPassword(input: CreatePasswordUserInput): Promise<UserRow> {
     const row = await this.db
       .prepare(
-        `INSERT INTO users (email, password_hash, username, mobile, gender, avatar_gender, avatar_seed, preferred_lang, secondary_lang)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING ${USER_COLUMNS}`
+        `INSERT INTO users (email, password_hash, username, mobile, gender, avatar_gender, avatar_seed)
+         VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING ${USER_COLUMNS}`
       )
       .bind(
         input.email,
@@ -89,9 +86,7 @@ export class UsersRepository implements IUsersRepository {
         input.mobile,
         input.gender,
         input.avatarGender,
-        input.avatarSeed,
-        input.preferredLang,
-        input.secondaryLang
+        input.avatarSeed
       )
       .first<UserRow>();
     return row!;
@@ -100,11 +95,10 @@ export class UsersRepository implements IUsersRepository {
   async attachPassword(userId: number, input: CreatePasswordUserInput): Promise<UserRow> {
     const row = await this.db
       .prepare(
-        `UPDATE users SET password_hash = ?, username = COALESCE(username, ?), mobile = COALESCE(mobile, ?), gender = COALESCE(gender, ?),
-                preferred_lang = COALESCE(preferred_lang, ?), secondary_lang = COALESCE(secondary_lang, ?)
+        `UPDATE users SET password_hash = ?, username = COALESCE(username, ?), mobile = COALESCE(mobile, ?), gender = COALESCE(gender, ?)
          WHERE id = ? RETURNING ${USER_COLUMNS}`
       )
-      .bind(input.passwordHash, input.username, input.mobile, input.gender, input.preferredLang, input.secondaryLang, userId)
+      .bind(input.passwordHash, input.username, input.mobile, input.gender, userId)
       .first<UserRow>();
     return row!;
   }
@@ -121,14 +115,6 @@ export class UsersRepository implements IUsersRepository {
     const row = await this.db
       .prepare(`UPDATE users SET password_hash = ? WHERE id = ? RETURNING ${USER_COLUMNS}`)
       .bind(passwordHash, userId)
-      .first<UserRow>();
-    return row!;
-  }
-
-  async updateLanguagePrefs(userId: number, preferredLang: Lang | null, secondaryLang: Lang | null): Promise<UserRow> {
-    const row = await this.db
-      .prepare(`UPDATE users SET preferred_lang = ?, secondary_lang = ? WHERE id = ? RETURNING ${USER_COLUMNS}`)
-      .bind(preferredLang, secondaryLang, userId)
       .first<UserRow>();
     return row!;
   }

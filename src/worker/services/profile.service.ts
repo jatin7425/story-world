@@ -5,7 +5,6 @@ import type { AuthUser } from "../types";
 import type { StoryRow, ProfileCommentRow } from "../repositories/types";
 import { toAuthUser, randomAvatarSeed, isGender } from "../lib/avatar";
 import { toPaginated, type Paginated } from "../lib/pagination";
-import { isLang, type Lang } from "../lib/translation-prompt";
 
 export interface ProfileData {
   user: AuthUser;
@@ -41,21 +40,6 @@ export class ProfileService {
   async updateGender(userId: number, gender: string | null): Promise<AuthUser | { error: string }> {
     if (gender !== null && !isGender(gender)) return { error: "Invalid gender value" };
     const updated = await this.users.updateGender(userId, gender, randomAvatarSeed());
-    return toAuthUser(updated);
-  }
-
-  async updateLanguagePrefs(
-    userId: number,
-    preferredLang: string | null,
-    secondaryLang: string | null
-  ): Promise<AuthUser | { error: string }> {
-    if (preferredLang !== null && !isLang(preferredLang)) return { error: "Invalid preferred language" };
-    if (secondaryLang !== null && !isLang(secondaryLang)) return { error: "Invalid secondary language" };
-    const updated = await this.users.updateLanguagePrefs(
-      userId,
-      preferredLang as Lang | null,
-      secondaryLang as Lang | null
-    );
     return toAuthUser(updated);
   }
 }
