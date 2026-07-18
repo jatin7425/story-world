@@ -113,7 +113,7 @@ export default function Chapter() {
         <div
           className="page-hero-bg"
           style={{
-            backgroundImage: `linear-gradient(to bottom, transparent 0%, transparent 40%, var(--bg) 95%), url(${heroImageUrl})`,
+            backgroundImage: `linear-gradient(to bottom, transparent 0%, transparent 25%, var(--bg) 50%, var(--bg) 100%), url(${heroImageUrl})`,
           }}
         />
       )}
