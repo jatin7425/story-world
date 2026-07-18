@@ -6,7 +6,7 @@ import { parseReaderPagination } from "../lib/pagination";
 export const storiesRoutes = new Hono<AppEnv>();
 
 storiesRoutes.get("/", async (c) => {
-  const { page, limit } = parseReaderPagination(c);
+  const { page = 1, limit = 10 } = parseReaderPagination(c);
   const { items, total, totalPages } = await c
     .get("services")
     .storyService.listStories(page, limit, c.req.query("q"));
@@ -15,7 +15,7 @@ storiesRoutes.get("/", async (c) => {
 
 storiesRoutes.get("/:slug", async (c) => {
   const user = await getCurrentUser(c);
-  const { page, limit } = parseReaderPagination(c);
+  const { page = 1, limit = 10 } = parseReaderPagination(c);
   const detail = await c.get("services").storyService.getStoryDetail(c.req.param("slug"), user?.id ?? null, page, limit);
   if (!detail) return c.json({ error: "Story not found" }, 404);
 
