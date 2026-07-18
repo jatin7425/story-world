@@ -9,6 +9,9 @@ import { LikesRepository } from "./repositories/likes.repository";
 import { CommentsRepository } from "./repositories/comments.repository";
 import { RestrictionsRepository } from "./repositories/restrictions.repository";
 import { McpTokensRepository } from "./repositories/mcp-tokens.repository";
+import { OAuthClientsRepository } from "./repositories/oauth-clients.repository";
+import { OAuthCodesRepository } from "./repositories/oauth-codes.repository";
+import { OAuthTokensRepository } from "./repositories/oauth-tokens.repository";
 import { StoryService } from "./services/story.service";
 import { ChapterService } from "./services/chapter.service";
 import { CommentService } from "./services/comment.service";
@@ -18,6 +21,7 @@ import { AdminUserService } from "./services/admin-user.service";
 import { ProfileService } from "./services/profile.service";
 import { McpTokenService } from "./services/mcp-token.service";
 import { McpToolsService } from "./services/mcp-tools.service";
+import { OAuthService } from "./services/oauth.service";
 
 /**
  * Composition root: wires repositories (data access) into services
@@ -37,6 +41,9 @@ export function createContainer(env: Env) {
   const comments = new CommentsRepository(env.DB);
   const restrictions = new RestrictionsRepository(env.DB);
   const mcpTokens = new McpTokensRepository(env.DB);
+  const oauthClients = new OAuthClientsRepository(env.DB);
+  const oauthCodes = new OAuthCodesRepository(env.DB);
+  const oauthTokens = new OAuthTokensRepository(env.DB);
 
   return {
     storyService: new StoryService(stories, chapters, follows),
@@ -48,6 +55,7 @@ export function createContainer(env: Env) {
     profileService: new ProfileService(follows, comments, users),
     mcpTokenService: new McpTokenService(mcpTokens),
     mcpToolsService: new McpToolsService(stories, chapters),
+    oauthService: new OAuthService(oauthClients, oauthCodes, oauthTokens),
   };
 }
 

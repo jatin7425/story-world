@@ -10,6 +10,7 @@ import { adminUsersRoutes } from "./routes/admin-users";
 import { adminMcpRoutes } from "./routes/admin-mcp";
 import { profileRoutes } from "./routes/profile";
 import { mcpRoutes } from "./routes/mcp";
+import { oauthRoutes, oauthWellKnownRoutes } from "./routes/oauth";
 import { defaultMeta, servePageWithMeta, truncateForDescription } from "./lib/seo";
 
 const app = new Hono<AppEnv>();
@@ -29,6 +30,8 @@ app.route("/api/admin", adminUsersRoutes);
 app.route("/api/admin/mcp", adminMcpRoutes);
 app.route("/api/profile", profileRoutes);
 app.route("/mcp", mcpRoutes);
+app.route("/oauth", oauthRoutes);
+app.route("/.well-known", oauthWellKnownRoutes);
 
 // HTML page routes below get per-page <title>/meta/OG tags injected into the
 // SPA shell for search + social-share previews. Everything else (login,
@@ -83,6 +86,7 @@ app.get("/robots.txt", (c) => {
     "Disallow: /api/",
     "Disallow: /auth/",
     "Disallow: /mcp",
+    "Disallow: /oauth",
     `Sitemap: ${origin}/sitemap.xml`,
     "",
   ].join("\n");

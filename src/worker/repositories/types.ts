@@ -80,3 +80,39 @@ export interface UserRow {
   avatar_seed: number;
   created_at: string;
 }
+
+export interface OAuthClientRow {
+  client_id: string;
+  client_name: string | null;
+  redirect_uris: string; // JSON array, serialized
+  created_at: string;
+}
+
+export interface OAuthAuthorizationCodeRow {
+  code: string;
+  client_id: string;
+  user_id: number;
+  redirect_uri: string;
+  code_challenge: string;
+  scope: string | null;
+  expires_at: string;
+  used_at: string | null;
+}
+
+export interface OAuthAccessTokenRow {
+  token_hash: string;
+  client_id: string;
+  user_id: number;
+  expires_at: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export interface OAuthRefreshTokenRow {
+  token_hash: string;
+  client_id: string;
+  user_id: number;
+  expires_at: string;
+  created_at: string;
+  revoked_at: string | null;
+}

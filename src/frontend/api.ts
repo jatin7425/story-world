@@ -266,4 +266,18 @@ export const api = {
       body: JSON.stringify({ name }),
     }),
   revokeMcpToken: (id: number) => request<{ ok: true }>(`/api/admin/mcp/tokens/${id}`, { method: "DELETE" }),
+
+  // --- OAuth consent screen (for the /oauth/authorize page) ---
+  getOAuthClient: (clientId: string) =>
+    request<{ client_id: string; client_name: string | null; redirect_uris: string[] }>(
+      `/oauth/client-info?client_id=${encodeURIComponent(clientId)}`
+    ),
+  authorizeOAuthClient: (input: {
+    client_id: string;
+    redirect_uri: string;
+    code_challenge: string;
+    code_challenge_method: string;
+    scope?: string | null;
+    state?: string | null;
+  }) => request<{ redirect_url: string }>("/oauth/authorize", { method: "POST", body: JSON.stringify(input) }),
 };

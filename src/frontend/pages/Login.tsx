@@ -23,7 +23,8 @@ export default function Login() {
 
   const afterLogin = async () => {
     await refresh();
-    navigate("/");
+    const next = searchParams.get("next");
+    navigate(next ? decodeURIComponent(next) : "/");
   };
 
   const submitMagicLink = async (e: React.FormEvent) => {

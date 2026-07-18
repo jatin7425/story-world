@@ -7,6 +7,7 @@ import StoryPage from "./pages/Story";
 import ChapterPage from "./pages/Chapter";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
+import OAuthAuthorize from "./pages/OAuthAuthorize";
 import { api } from "./api";
 
 function SunIcon() {
@@ -166,6 +167,7 @@ export default function ReaderApp() {
           <Route path="/stories/:slug/chapters/:number" element={<ChapterPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/oauth/authorize" element={<OAuthAuthorize />} />
         </Routes>
       </main>
     </div>

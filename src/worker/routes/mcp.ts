@@ -128,8 +128,20 @@ mcpRoutes.get("/", (c) =>
 mcpRoutes.post("/", async (c) => {
   const authHeader = c.req.header("Authorization") ?? "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
-  if (!token || !(await c.get("services").mcpTokenService.verify(token))) {
-    return c.json(rpcError(null, -32001, "Unauthorized: missing or invalid bearer token."), 401, CORS_HEADERS);
+  // Two independent ways in: a static admin-generated token (McpTokenService,
+  // for Claude Desktop/Code style config-file clients) or an OAuth access
+  // token (OAuthService, for connector UIs like Claude web/Grok that only
+  // support OAuth). Either is accepted here.
+  const authorized =
+    !!token &&
+    ((await c.get("services").mcpTokenService.verify(token)) ||
+      (await c.get("services").oauthService.verifyAccessToken(token)) !== null);
+  if (!authorized) {
+    const origin = new URL(c.req.url).origin;
+    return c.json(rpcError(null, -32001, "Unauthorized: missing or invalid bearer token."), 401, {
+      ...CORS_HEADERS,
+      "WWW-Authenticate": `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource"`,
+    });
   }
 
   let message: unknown;

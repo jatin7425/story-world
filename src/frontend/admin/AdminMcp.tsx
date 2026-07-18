@@ -38,6 +38,7 @@ export default function AdminMcp() {
   const [limit, setLimit] = useState(10);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [authTab, setAuthTab] = useState<"token" | "oauth">("token");
 
   const endpoint = `${window.location.origin}/mcp`;
 
@@ -179,10 +180,50 @@ export default function AdminMcp() {
       <div className="admin-card mcp-docs">
         <p>
           <code>{endpoint}</code> — a remote MCP server (Streamable HTTP, stateless, JSON-only — no SSE stream).
-          Authenticate with <code>Authorization: Bearer &lt;token&gt;</code>. This is a plain bearer token, not
-          OAuth — works with any client that lets you set a custom header (Claude Desktop, Claude Code, and most
-          programmatic MCP clients). Clients that require OAuth specifically aren't supported yet.
+          There are two ways to authenticate, depending on the client.
         </p>
+
+        <div className="admin-tabs">
+          <button type="button" className={authTab === "token" ? "" : "admin-btn-ghost"} onClick={() => setAuthTab("token")}>
+            Via token
+          </button>
+          <button type="button" className={authTab === "oauth" ? "" : "admin-btn-ghost"} onClick={() => setAuthTab("oauth")}>
+            Via OAuth
+          </button>
+        </div>
+
+        {authTab === "token" ? (
+          <>
+            <h3>Config-file clients (Claude Desktop, Claude Code, most programmatic clients)</h3>
+            <p>
+              Use a plain bearer token generated above with{" "}
+              <code>Authorization: Bearer &lt;token&gt;</code> set as a custom header:
+            </p>
+            <pre className="mcp-example">{exampleConfig(endpoint, "mcp_your_token_here")}</pre>
+          </>
+        ) : (
+          <>
+            <h3>Web connector UIs (Claude.ai web, Grok, and similar "Add custom connector" dialogs)</h3>
+            <p>
+              These only support OAuth — there's no field for a raw token, and no Client ID/Secret to generate or
+              copy. Just paste <code>{endpoint}</code> as the server URL and leave everything else blank:
+            </p>
+            <ol className="mcp-oauth-steps">
+              <li>
+                The client registers itself automatically (Dynamic Client Registration) — no Client ID/Secret
+                exists until this step, and you never see or handle it.
+              </li>
+              <li>
+                It redirects you to <code>/oauth/authorize</code> on this site, where you log in with your admin
+                account.
+              </li>
+              <li>
+                You click <strong>Allow</strong> — that's the entire manual step in this flow.
+              </li>
+              <li>The client exchanges that approval for an access token behind the scenes and connects.</li>
+            </ol>
+          </>
+        )}
 
         <h3>Tools</h3>
         <table className="mcp-tool-table">
@@ -197,10 +238,6 @@ export default function AdminMcp() {
             ))}
           </tbody>
         </table>
-
-        <h3>Example client config</h3>
-        <p>For Claude Desktop / Claude Code-style <code>mcpServers</code> config (swap in a real token):</p>
-        <pre className="mcp-example">{exampleConfig(endpoint, "mcp_your_token_here")}</pre>
 
         <h3>Publishing workflow</h3>
         <p>
