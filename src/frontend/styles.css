@@ -72,7 +72,7 @@ a {
   width: 100%;
   max-width: 860px;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 3.2rem 1.5rem;
 }
 
 /* Header */
@@ -735,7 +735,6 @@ label {
 .chapter-page {
   max-width: 680px;
   margin: 0 auto;
-  padding: 0 1.5rem;
 }
 .chapter-page h1 {
   font-family: var(--font-serif);
