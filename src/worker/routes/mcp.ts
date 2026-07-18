@@ -226,8 +226,15 @@ mcpRoutes.post("/", async (c) => {
       const handler = name ? TOOL_HANDLERS[name as ToolName] : undefined;
       if (!handler) return respond(rpcError(id, -32602, `Unknown tool "${name}".`));
 
-      const result = await handler(c.get("services").mcpToolsService, args);
-      return respond(rpcResult(id, result));
+      try {
+        const result = await handler(c.get("services").mcpToolsService, args);
+        console.log("MCP debug handler result", { method, name, id, result });
+        return respond(rpcResult(id, result));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Internal MCP handler error.";
+        console.error("MCP debug handler error", { method, name, id, message, error });
+        return respond(rpcError(id, -32000, message));
+      }
     }
 
     default:

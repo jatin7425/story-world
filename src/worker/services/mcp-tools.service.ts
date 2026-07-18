@@ -2,17 +2,14 @@ import type { IStoriesRepository } from "../repositories/stories.repository";
 import type { IChaptersRepository } from "../repositories/chapters.repository";
 import { slugify } from "../lib/slugify";
 
-export interface McpToolResult {
-  content: { type: "text"; text: string }[];
-  isError?: boolean;
-}
+export type McpToolResult = unknown;
 
 function ok(data: unknown): McpToolResult {
-  return { content: [{ type: "text", text: typeof data === "string" ? data : JSON.stringify(data, null, 2) }] };
+  return data;
 }
 
-function fail(message: string): McpToolResult {
-  return { content: [{ type: "text", text: message }], isError: true };
+function fail(message: string): never {
+  throw new Error(message);
 }
 
 const DRAFT_NOTE = "Saved as a draft — invisible to readers until an admin publishes it.";
