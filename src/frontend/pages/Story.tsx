@@ -4,6 +4,7 @@ import { api, type ChapterSummary, type Story as StoryType } from "../api";
 import { useAuth } from "../AuthContext";
 import Breadcrumbs from "../Breadcrumbs";
 import Pagination from "../Pagination";
+import { formatChapterTitle } from "../chapterTitle";
 
 export default function Story() {
   const { slug } = useParams<{ slug: string }>();
@@ -124,10 +125,7 @@ export default function Story() {
           return (
             <li key={ch.id}>
               <Link to={`/stories/${story.slug}/chapters/${ch.chapter_number}`}>
-                <span>
-                  Chapter {ch.chapter_number}
-                  {ch.title ? `: ${ch.title}` : ""}
-                </span>
+                <span>{formatChapterTitle(ch.chapter_number, ch.title)}</span>
                 {!isFree && !user && <span className="locked-badge">🔒 Login required</span>}
               </Link>
             </li>

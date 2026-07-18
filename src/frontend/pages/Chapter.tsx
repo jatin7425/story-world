@@ -5,6 +5,7 @@ import { useAuth } from "../AuthContext";
 import Breadcrumbs from "../Breadcrumbs";
 import Pagination from "../Pagination";
 import { renderChapterContent } from "../markdown";
+import { formatChapterTitle } from "../chapterTitle";
 
 export default function Chapter() {
   const { slug, number } = useParams<{ slug: string; number: string }>();
@@ -125,10 +126,7 @@ export default function Chapter() {
           { label: `Chapter ${chapter.chapter_number}` },
         ]}
       />
-      <h1>
-        Chapter {chapter.chapter_number}
-        {chapter.title ? `: ${chapter.title}` : ""}
-      </h1>
+      <h1>{formatChapterTitle(chapter.chapter_number, chapter.title)}</h1>
       <div className="chapter-content">{renderChapterContent(chapter.content, chapter.content_format)}</div>
 
       <div className="chapter-actions">
