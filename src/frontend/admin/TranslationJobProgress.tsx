@@ -20,6 +20,7 @@ export default function TranslationJobProgress({
   const [job, setJob] = useState(initialJob);
   const [running, setRunning] = useState(true);
   const [logLines, setLogLines] = useState<string[]>([]);
+  const [stepError, setStepError] = useState<string | null>(null);
   const cancelledRef = useRef(false);
 
   useEffect(() => {
@@ -28,7 +29,20 @@ export default function TranslationJobProgress({
 
     const step = async () => {
       if (cancelledRef.current || !active) return;
-      const result = await api.stepTranslationJob(jobId);
+
+      let result: Awaited<ReturnType<typeof api.stepTranslationJob>>;
+      try {
+        result = await api.stepTranslationJob(jobId);
+      } catch (err) {
+        if (!active || cancelledRef.current) return;
+        // A network/request-level failure here is not a translation failure
+        // (those are already caught server-side and recorded per-item) — it
+        // means the step call itself never completed, so stop the loop
+        // instead of leaving the modal stuck on "running" forever.
+        setStepError(err instanceof Error ? err.message : "Lost connection while translating");
+        setRunning(false);
+        return;
+      }
       if (!active || cancelledRef.current) return;
 
       if ("done" in result) {
@@ -71,6 +85,11 @@ export default function TranslationJobProgress({
         <p className="job-progress-label">
           {job.job.completed_items} / {job.job.total_items} items — {running ? "running" : job.job.status}
         </p>
+        {stepError && (
+          <p className="error">
+            Lost connection: {stepError}. Progress so far is saved — reopen this job to resume.
+          </p>
+        )}
         <div className="job-log-panel">
           {logLines.length === 0 ? (
             <p className="admin-empty">Starting…</p>
