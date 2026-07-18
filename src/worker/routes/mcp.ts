@@ -195,7 +195,13 @@ mcpRoutes.post("/", async (c) => {
       headers: CORS_HEADERS,
       body,
     });
-    return c.json(body, status, CORS_HEADERS);
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: {
+        ...CORS_HEADERS,
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    });
   };
 
   switch (method) {
