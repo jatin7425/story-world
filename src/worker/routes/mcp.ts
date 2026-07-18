@@ -167,8 +167,7 @@ mcpRoutes.post("/", async (c) => {
     method?: string;
     params?: Record<string, unknown>;
   };
-  const isNotification = id === undefined;
-  const respond = (body: unknown) => (isNotification ? c.body(null, 202, CORS_HEADERS) : c.json(body, 200, CORS_HEADERS));
+  const respond = (body: unknown) => c.json(body, 200, CORS_HEADERS);
 
   switch (method) {
     case "initialize": {
