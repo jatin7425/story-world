@@ -16,6 +16,7 @@ export default function Story() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [descExpanded, setDescExpanded] = useState(false);
 
   const load = () => {
     if (!slug) return;
@@ -33,7 +34,10 @@ export default function Story() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => setChapterPage(1), [slug]);
+  useEffect(() => {
+    setChapterPage(1);
+    setDescExpanded(false);
+  }, [slug]);
   useEffect(load, [slug, chapterPage]);
 
   const toggleFollow = async () => {
@@ -50,6 +54,10 @@ export default function Story() {
 
   if (loading) return <p>Loading...</p>;
   if (!story) return <p>Story not found.</p>;
+
+  const tagList = story.tags
+    ? story.tags.split(",").map((t) => t.trim()).filter(Boolean)
+    : [];
 
   return (
     <div className="story-page">
@@ -70,8 +78,24 @@ export default function Story() {
           </div>
         )}
         <h1>{story.title}</h1>
+        {tagList.length > 0 && (
+          <div className="story-tags">
+            {tagList.map((tag) => (
+              <span key={tag} className="tag-chip">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="story-banner-body">
-          {story.description && <p className="description">{story.description}</p>}
+          {story.description && (
+            <div className={descExpanded ? "description-box expanded" : "description-box"}>
+              <p className="description">{story.description}</p>
+              <button type="button" className="desc-toggle" onClick={() => setDescExpanded((v) => !v)}>
+                {descExpanded ? "See less" : "See more"}
+              </button>
+            </div>
+          )}
           <p className="meta">
             {followersCount} following · {chaptersTotal} chapter{chaptersTotal === 1 ? "" : "s"}
           </p>

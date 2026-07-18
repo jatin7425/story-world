@@ -708,7 +708,7 @@ label {
 .story-page .story-banner {
   display: grid;
   grid-template-columns: 140px 1fr;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto 1fr;
   column-gap: 1.5rem;
   margin-bottom: 2rem;
 }
@@ -716,12 +716,13 @@ label {
   grid-template-columns: 1fr;
 }
 .story-page .story-banner.no-cover h1,
+.story-page .story-banner.no-cover .story-tags,
 .story-page .story-banner.no-cover .story-banner-body {
   grid-column: 1;
 }
 .story-page .story-banner .cover {
   grid-column: 1;
-  grid-row: 1 / 3;
+  grid-row: 1 / 4;
   width: 140px;
   aspect-ratio: 2 / 3;
   border-radius: var(--radius);
@@ -742,9 +743,26 @@ label {
   font-size: 1.9rem;
   align-self: start;
 }
-.story-page .story-banner-body {
+.story-page .story-tags {
   grid-column: 2;
   grid-row: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.85rem;
+}
+.story-page .tag-chip {
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  padding: 0.2rem 0.6rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.story-page .story-banner-body {
+  grid-column: 2;
+  grid-row: 3;
 }
 .story-page .description {
   color: var(--text-muted);
@@ -762,21 +780,29 @@ label {
   flex-wrap: wrap;
 }
 
+/* The boxed/collapsible description is a mobile-only addition (see wireframe
+   from the mobile-layout request) — hidden here so desktop, which was
+   already signed off, keeps showing the plain, always-expanded paragraph. */
+.story-page .desc-toggle {
+  display: none;
+}
+
 @media (max-width: 640px) {
-  /* Small cover + title share a compact top row; description/meta/actions
-     drop to their own full-width row below instead of being squeezed into
-     the narrow column next to the cover. */
+  /* Small cover + title share a compact top row, tags sit in a second row
+     still beside the cover, and description/meta/actions drop to their own
+     full-width row below instead of being squeezed into the narrow column
+     next to the cover. */
   .story-page .story-banner {
     grid-template-columns: 64px 1fr;
-    grid-template-rows: auto auto;
+    grid-template-rows: auto auto auto;
     column-gap: 0.85rem;
-    row-gap: 0.5rem;
+    row-gap: 0.4rem;
   }
   .story-page .story-banner.no-cover {
     grid-template-columns: 1fr;
   }
   .story-page .story-banner .cover {
-    grid-row: 1;
+    grid-row: 1 / 3;
     width: 64px;
   }
   .story-page h1 {
@@ -785,12 +811,58 @@ label {
     font-size: 1.15rem;
     margin: 0;
   }
+  .story-page .story-tags {
+    gap: 0.3rem;
+    margin: 0;
+    align-content: flex-start;
+  }
+  .story-page .tag-chip {
+    padding: 0.12rem 0.45rem;
+    font-size: 0.68rem;
+  }
   .story-page .story-banner-body {
     grid-column: 1 / -1;
-    grid-row: 2;
+    grid-row: 3;
   }
   .story-page .story-actions {
     justify-content: flex-start;
+  }
+
+  .story-page .description-box {
+    position: relative;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.85rem 0.9rem 2.4rem;
+    margin: 0 0 0.9rem;
+  }
+  .story-page .description-box .description {
+    margin: 0;
+    font-size: 0.85rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .story-page .description-box.expanded .description {
+    display: block;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+    overflow: visible;
+  }
+  .story-page .desc-toggle {
+    display: inline-flex;
+    position: absolute;
+    left: 0.9rem;
+    bottom: 0.7rem;
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0;
+    cursor: pointer;
   }
 }
 
