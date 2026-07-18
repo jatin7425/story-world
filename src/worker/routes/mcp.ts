@@ -103,13 +103,23 @@ const TOOLS = [
       "Explain the story and chapter workflow on this site, including MCP draft behavior, publishing rules, and how to use the other tools.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
   },
+  {
+    name: "echo_text",
+    description: "Return a small plain-text response for connector testing.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "echo_structured",
+    description: "Return a small structured object response for connector testing.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
 ] as const;
 
 type ToolName = (typeof TOOLS)[number]["name"];
 
 const TOOL_HANDLERS: Record<
   ToolName,
-  (svc: McpToolsService, args: Record<string, unknown>) => Promise<McpToolResult>
+  (svc: McpToolsService, args: Record<string, unknown>) => Promise<unknown>
 > = {
   list_stories: (svc) => svc.listStories(),
   get_story_chapters: (svc, args) => svc.getStoryChapters(args),
@@ -117,6 +127,8 @@ const TOOL_HANDLERS: Record<
   create_chapter: (svc, args) => svc.createChapter(args),
   edit_chapter: (svc, args) => svc.editChapter(args),
   explain_site: (svc) => svc.explainSite(),
+  echo_text: () => Promise.resolve("hello"),
+  echo_structured: () => Promise.resolve({ message: "hello" }),
 };
 
 function rpcResult(id: unknown, result: unknown) {
