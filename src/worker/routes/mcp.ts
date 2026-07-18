@@ -104,6 +104,26 @@ const TOOLS = [
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
+    name: "upload_image_url",
+    description: "Fetch an image from a public URL and store it as a blob; returns an image path.",
+    inputSchema: {
+      type: "object",
+      properties: { url: { type: "string" }, filename: { type: "string" } },
+      required: ["url"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "upload_image_data",
+    description: "Upload base64 image data to store as a blob; returns an image path.",
+    inputSchema: {
+      type: "object",
+      properties: { data_base64: { type: "string" }, filename: { type: "string" }, content_type: { type: "string" } },
+      required: ["data_base64"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "echo_text",
     description: "Return a small plain-text response for connector testing.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
@@ -129,6 +149,8 @@ const TOOL_HANDLERS: Record<
   explain_site: (svc) => svc.explainSite(),
   echo_text: (svc) => svc.echoText(),
   echo_structured: (svc) => svc.echoStructured(),
+  upload_image_url: (svc, args) => svc.uploadImageFromUrl(args),
+  upload_image_data: (svc, args) => svc.uploadImageFromData(args),
 };
 
 function rpcResult(id: unknown, result: unknown) {
@@ -235,6 +257,33 @@ mcpRoutes.post("/", async (c) => {
       try {
         const result = await handler(c.get("services").mcpToolsService, args);
         console.log("MCP debug handler result", { method, name, id, result });
+
+        // If the tool returned the legacy `content: [{type: 'text', text: string}]`
+        // where `text` contains JSON, and that JSON includes an `image_path`,
+        // augment it with an absolute `image_url` using the request origin so
+        // clients (LLMs) can use the URL directly.
+        try {
+          const origin = new URL(c.req.url).origin;
+          if (result && typeof result === "object" && Array.isArray((result as any).content)) {
+            const content = (result as any).content;
+            if (content.length > 0 && content[0]?.type === "text" && typeof content[0].text === "string") {
+              const txt = content[0].text.trim();
+              if ((txt.startsWith("{") || txt.startsWith("[")) && txt.length < 20000) {
+                try {
+                  const parsed = JSON.parse(txt);
+                  if (parsed && typeof parsed === "object" && typeof parsed.image_path === "string") {
+                    parsed.image_url = origin + parsed.image_path;
+                    content[0].text = JSON.stringify(parsed, null, 2);
+                    console.log("MCP augmented image_url", { id, origin, image_path: parsed.image_path });
+                  }
+                } catch {}
+              }
+            }
+          }
+        } catch (e) {
+          console.error("MCP image_url augmentation failed", { error: String(e) });
+        }
+
         return respond(rpcResult(id, result));
       } catch (error) {
         const message = error instanceof Error ? error.message : "Internal MCP handler error.";

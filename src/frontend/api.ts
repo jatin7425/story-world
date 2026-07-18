@@ -267,6 +267,21 @@ export const api = {
     }),
   revokeMcpToken: (id: number) => request<{ ok: true }>(`/api/admin/mcp/tokens/${id}`, { method: "DELETE" }),
 
+  // --- Admin: images ---
+  adminListImages: (page?: number, limit?: number) =>
+    request<{ images: any[] } & PageMeta>(`/api/admin/images${qs({ page, limit })}`),
+  adminUploadImage: (input: FormData | { data_base64?: string; source_url?: string; filename?: string; content_type?: string }) => {
+    if (input instanceof FormData) {
+      return fetch(`/api/admin/images`, { method: "POST", body: input, credentials: "include" }).then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new ApiError((data as any).error ?? `Request failed: ${res.status}`, res.status);
+        return data as { image: any };
+      });
+    }
+    return request<{ image: any }>(`/api/admin/images`, { method: "POST", body: JSON.stringify(input) });
+  },
+  adminDeleteImage: (id: number) => request<{ ok: true }>(`/api/admin/images/${id}`, { method: "DELETE" }),
+
   // --- OAuth consent screen (for the /oauth/authorize page) ---
   getOAuthClient: (clientId: string) =>
     request<{ client_id: string; client_name: string | null; redirect_uris: string[] }>(

@@ -1,6 +1,7 @@
 import type { Env } from "./types";
 import { StoriesRepository } from "./repositories/stories.repository";
 import { ChaptersRepository } from "./repositories/chapters.repository";
+import { ImagesRepository } from "./repositories/images.repository";
 import { UsersRepository } from "./repositories/users.repository";
 import { SessionsRepository } from "./repositories/sessions.repository";
 import { MagicLinkRepository } from "./repositories/magic-link.repository";
@@ -41,6 +42,7 @@ export function createContainer(env: Env) {
   const comments = new CommentsRepository(env.DB);
   const restrictions = new RestrictionsRepository(env.DB);
   const mcpTokens = new McpTokensRepository(env.DB);
+  const images = new ImagesRepository(env.DB);
   const oauthClients = new OAuthClientsRepository(env.DB);
   const oauthCodes = new OAuthCodesRepository(env.DB);
   const oauthTokens = new OAuthTokensRepository(env.DB);
@@ -54,7 +56,8 @@ export function createContainer(env: Env) {
     adminUserService: new AdminUserService(users, restrictions, sessions),
     profileService: new ProfileService(follows, comments, users),
     mcpTokenService: new McpTokenService(mcpTokens),
-    mcpToolsService: new McpToolsService(stories, chapters),
+    mcpToolsService: new McpToolsService(stories, chapters, images),
+    imagesRepository: images,
     oauthService: new OAuthService(oauthClients, oauthCodes, oauthTokens),
   };
 }

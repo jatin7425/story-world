@@ -1,5 +1,6 @@
 import type { IStoriesRepository } from "../repositories/stories.repository";
 import type { IChaptersRepository } from "../repositories/chapters.repository";
+import type { IImagesRepository } from "../repositories/images.repository";
 import { slugify } from "../lib/slugify";
 
 export interface McpToolResult {
@@ -26,7 +27,8 @@ const DRAFT_NOTE = "Saved as a draft — invisible to readers until an admin pub
 export class McpToolsService {
   constructor(
     private readonly stories: IStoriesRepository,
-    private readonly chapters: IChaptersRepository
+    private readonly chapters: IChaptersRepository,
+    private readonly images: IImagesRepository
   ) {}
 
   async listStories(): Promise<McpToolResult> {
@@ -198,5 +200,46 @@ export class McpToolsService {
 
   async echoStructured(): Promise<McpToolResult> {
     return ok({ message: "hello" });
+  }
+
+  async uploadImageFromUrl(args: { url?: unknown; filename?: unknown }): Promise<McpToolResult> {
+    const url = typeof args.url === "string" ? args.url.trim() : "";
+    const filename = typeof args.filename === "string" ? args.filename.trim() : null;
+    if (!url) return fail("url is required.");
+
+    // Fetch remote image and store as base64 blob
+    const res = await fetch(url);
+    if (!res.ok) return fail(`Failed to fetch image from URL: ${res.status}`);
+    const contentType = res.headers.get("content-type") || null;
+    const buffer = await res.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    const b64 = typeof globalThis.btoa === "function" ? globalThis.btoa(binary) : Buffer.from(binary, "binary").toString("base64");
+
+    const row = await this.images.create(filename, contentType, b64, url);
+    return ok({ image_path: `/images/${row.id}`, id: row.id });
+  }
+
+  async uploadImageFromData(args: { data_base64?: unknown; filename?: unknown; content_type?: unknown }): Promise<McpToolResult> {
+    const dataBase64 = typeof args.data_base64 === "string" ? args.data_base64.trim() : "";
+    const filename = typeof args.filename === "string" ? args.filename.trim() : null;
+    const contentType = typeof args.content_type === "string" ? args.content_type.trim() : null;
+    if (!dataBase64) return fail("data_base64 is required.");
+
+    // Validate base64 quickly
+    try {
+      if (typeof globalThis.atob === "function") {
+        globalThis.atob(dataBase64);
+      } else {
+        // Fallback: attempt Buffer if available (build environments may polyfill)
+        Buffer.from(dataBase64, "base64");
+      }
+    } catch {
+      return fail("data_base64 is not valid base64.");
+    }
+
+    const row = await this.images.create(filename, contentType, dataBase64, null);
+    return ok({ image_path: `/images/${row.id}`, id: row.id });
   }
 }

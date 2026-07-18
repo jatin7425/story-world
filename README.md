@@ -86,3 +86,9 @@ npx wrangler secret put SESSION_SECRET
 - The MCP endpoint (`/mcp`) is a stateless Streamable HTTP JSON-RPC server, bearer-token
   authenticated. Generate/revoke tokens and read full tool docs at `/@dm!n/mcp` (the
   admin panel, at the obscure path — see that file's own note on why).
+
+This project currently keeps images in D1 by default, so no R2 migration is required.
+
+Notes:
+- Do not paste Cloudflare API keys or secrets into chat. Use `wrangler` or the Cloudflare dashboard to manage credentials.
+- Images are served from the database at `/images/:id`.

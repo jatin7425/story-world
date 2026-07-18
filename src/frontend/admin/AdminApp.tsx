@@ -11,6 +11,7 @@ import AdminChapterCreate from "./AdminChapterCreate";
 import AdminChapterReview from "./AdminChapterReview";
 import AdminUsers from "./AdminUsers";
 import AdminMcp from "./AdminMcp";
+import AdminImages from "./AdminImages";
 import "./admin.css";
 
 function AdminSidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => void }) {
@@ -36,6 +37,7 @@ function AdminSidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: (
         <Link to={ADMIN_PATH}>Stories</Link>
         <Link to={`${ADMIN_PATH}/users`}>Users</Link>
         <Link to={`${ADMIN_PATH}/mcp`}>MCP</Link>
+        <Link to={`${ADMIN_PATH}/images`}>Images</Link>
       </nav>
       <div className="admin-sidebar-footer">
         <button type="button" className="admin-theme-toggle" onClick={toggleTheme}>
@@ -96,6 +98,7 @@ function AdminLayout() {
           <Route path="/stories/:id/chapters/:number" element={<AdminChapterReview />} />
           <Route path="/users" element={<AdminUsers />} />
           <Route path="/mcp" element={<AdminMcp />} />
+          <Route path="/images" element={<AdminImages />} />
         </Routes>
       </main>
     </div>
