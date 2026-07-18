@@ -9,6 +9,7 @@ const TOOL_DOCS = [
   { name: "create_story", desc: "Create a new story. Always saved as a draft." },
   { name: "create_chapter", desc: "Write a new chapter on an existing story. Always saved as a draft." },
   { name: "edit_chapter", desc: "Edit a chapter's title/content/image. Only works while it's still a draft." },
+  { name: "explain_site", desc: "Explain the site workflow, MCP draft rules, and how the other tools work." },
 ];
 
 function exampleConfig(endpoint: string, token: string) {

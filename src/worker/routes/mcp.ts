@@ -97,6 +97,12 @@ const TOOLS = [
       additionalProperties: false,
     },
   },
+  {
+    name: "explain_site",
+    description:
+      "Explain the story and chapter workflow on this site, including MCP draft behavior, publishing rules, and how to use the other tools.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
 ] as const;
 
 type ToolName = (typeof TOOLS)[number]["name"];
@@ -110,6 +116,7 @@ const TOOL_HANDLERS: Record<
   create_story: (svc, args) => svc.createStory(args),
   create_chapter: (svc, args) => svc.createChapter(args),
   edit_chapter: (svc, args) => svc.editChapter(args),
+  explain_site: (svc) => svc.explainSite(),
 };
 
 function rpcResult(id: unknown, result: unknown) {
