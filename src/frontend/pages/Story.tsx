@@ -63,14 +63,14 @@ export default function Story() {
       )}
       <Breadcrumbs items={[{ label: "Home", to: "/" }, { label: story.title }]} />
 
-      <div className="story-banner">
+      <div className={story.cover_image_url ? "story-banner" : "story-banner no-cover"}>
         {story.cover_image_url && (
           <div className="cover">
             <img src={story.cover_image_url} alt="" />
           </div>
         )}
-        <div>
-          <h1>{story.title}</h1>
+        <h1>{story.title}</h1>
+        <div className="story-banner-body">
           {story.description && <p className="description">{story.description}</p>}
           <p className="meta">
             {followersCount} following · {chaptersTotal} chapter{chaptersTotal === 1 ? "" : "s"}

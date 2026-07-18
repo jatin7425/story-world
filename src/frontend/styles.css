@@ -57,6 +57,15 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+@media (max-width: 640px) {
+  /* Every rem-based size (nearly all text/spacing in this file) scales down
+     with the root font-size, so this one rule nudges text a bit smaller
+     site-wide on phones without touching every individual rule. */
+  html {
+    font-size: 15px;
+  }
+}
+
 a {
   color: var(--accent);
 }
@@ -579,6 +588,7 @@ label {
   font-size: 0.9rem;
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -599,6 +609,7 @@ label {
   .story-card p {
     font-size: 0.78rem;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
   }
   .story-card .cover .cover-placeholder {
     font-size: 1.1rem;
@@ -682,23 +693,36 @@ label {
   background-attachment: fixed;
 }
 @media (max-width: 640px) {
+  /* Full-bleed hero fights for space with the story header on small screens
+     (fixed background-attachment is also unreliable on mobile Safari) — just
+     skip it below the tablet breakpoint. */
   .page-hero-bg {
-    height: 30vh;
-    min-height: 180px;
-    max-height: 300px;
+    display: none;
   }
 }
 
-/* Story page */
+/* Story page
+   Grid (not flex) so the mobile breakpoint can re-flow which pieces sit next
+   to the cover vs. break to full width, without duplicating markup: .cover,
+   h1, and .story-banner-body are the three direct grid items everywhere. */
 .story-page .story-banner {
-  display: flex;
-  gap: 1.5rem;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  grid-template-rows: auto 1fr;
+  column-gap: 1.5rem;
   margin-bottom: 2rem;
 }
+.story-page .story-banner.no-cover {
+  grid-template-columns: 1fr;
+}
+.story-page .story-banner.no-cover h1,
+.story-page .story-banner.no-cover .story-banner-body {
+  grid-column: 1;
+}
 .story-page .story-banner .cover {
+  grid-column: 1;
+  grid-row: 1 / 3;
   width: 140px;
-  flex-shrink: 0;
   aspect-ratio: 2 / 3;
   border-radius: var(--radius);
   overflow: hidden;
@@ -711,9 +735,16 @@ label {
   object-fit: cover;
 }
 .story-page h1 {
+  grid-column: 2;
+  grid-row: 1;
   font-family: var(--font-serif);
   margin: 0 0 0.5rem;
   font-size: 1.9rem;
+  align-self: start;
+}
+.story-page .story-banner-body {
+  grid-column: 2;
+  grid-row: 2;
 }
 .story-page .description {
   color: var(--text-muted);
@@ -729,6 +760,38 @@ label {
   gap: 0.75rem;
   align-items: center;
   flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  /* Small cover + title share a compact top row; description/meta/actions
+     drop to their own full-width row below instead of being squeezed into
+     the narrow column next to the cover. */
+  .story-page .story-banner {
+    grid-template-columns: 64px 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 0.85rem;
+    row-gap: 0.5rem;
+  }
+  .story-page .story-banner.no-cover {
+    grid-template-columns: 1fr;
+  }
+  .story-page .story-banner .cover {
+    grid-row: 1;
+    width: 64px;
+  }
+  .story-page h1 {
+    grid-row: 1;
+    align-self: center;
+    font-size: 1.15rem;
+    margin: 0;
+  }
+  .story-page .story-banner-body {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .story-page .story-actions {
+    justify-content: flex-start;
+  }
 }
 
 .chapter-list {
