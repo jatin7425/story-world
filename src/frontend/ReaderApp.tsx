@@ -98,20 +98,22 @@ function Header() {
           <Link to="/" className="brand" onClick={closeMenu}>
             StoryGlobal
           </Link>
-          <nav className="desktop-nav">{authLinks}</nav>
-          <div className="header-controls">
-            <ThemeToggle />
-            <button
-              type="button"
-              className="menu-toggle"
-              aria-label={menuOpen ? "Close menu" : "Open menu"}
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((open) => !open)}
-            >
-              <span />
-              <span />
-              <span />
-            </button>
+          <div className="header-right">
+            <nav className="desktop-nav">{authLinks}</nav>
+            <div className="header-controls">
+              <ThemeToggle />
+              <button
+                type="button"
+                className="menu-toggle"
+                aria-label={menuOpen ? "Close menu" : "Open menu"}
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((open) => !open)}
+              >
+                <span />
+                <span />
+                <span />
+              </button>
+            </div>
           </div>
         </div>
       </header>

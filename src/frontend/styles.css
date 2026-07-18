@@ -109,6 +109,15 @@ a {
   color: var(--text);
   letter-spacing: 0.01em;
 }
+/* Groups nav links + the always-visible controls into one right-hand
+   cluster, so .header-inner's space-between only ever splits two things
+   (brand vs. everything else) instead of spreading nav/controls apart as
+   if they were unrelated. */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
 .desktop-nav {
   display: flex;
   gap: 1.5rem;
@@ -319,7 +328,11 @@ a {
     background: var(--bg-sunken);
   }
   .drawer-section-actions {
-    margin-top: 1.1rem;
+    /* Anchors sign-out/auth actions to the bottom of the drawer instead of
+       stacking directly under the nav links, where it used to leave an
+       arbitrary-looking gap once the language switcher (previously the
+       middle drawer-section) was removed. */
+    margin-top: auto;
     padding-top: 1.1rem;
     border-top: 1px solid var(--border);
     gap: 0.6rem;
