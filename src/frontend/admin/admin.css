@@ -1038,3 +1038,45 @@
     text-align: center;
   }
 }
+
+/* Images page */
+.admin-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+}
+.admin-image-card {
+  background: var(--a-bg-elevated);
+  border: 1px solid var(--a-border);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.admin-image-thumb-wrap {
+  aspect-ratio: 4 / 3;
+  background: var(--a-bg);
+  overflow: hidden;
+}
+.admin-image-thumb-full {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.admin-image-meta {
+  padding: 0.6rem 0.75rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.admin-image-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-image-card .admin-row-actions {
+  padding: 0.6rem 0.75rem 0.75rem;
+}

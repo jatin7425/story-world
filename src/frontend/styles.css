@@ -655,6 +655,40 @@ label {
   color: var(--border);
 }
 
+/* Full-bleed hero backdrop (Story + Chapter pages). Fallback chain (chapter
+   image -> story cover -> nothing) is resolved in the component; this class
+   just renders whatever URL it's given. Sits flush under the sticky header
+   via the negative top margin, which assumes it's the first child of
+   .app-main (padding-top: 2rem) — if that padding ever changes, update this.
+
+   margin-left/right: calc(50% - 50vw) — NOT the naive "left:50%;margin-left:
+   -50vw" version. That only cancels out correctly when the element's own
+   containing block spans the full viewport; here the containing block is
+   .story-page/.chapter-page (680-860px, centered), so "50%" must resolve
+   against THAT width for the offset to land the edge exactly at the
+   viewport edge regardless of container width. */
+.page-hero-bg {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  margin-top: -2rem;
+  margin-bottom: 2rem;
+  height: 42vh;
+  min-height: 240px;
+  max-height: 420px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+@media (max-width: 640px) {
+  .page-hero-bg {
+    height: 30vh;
+    min-height: 180px;
+    max-height: 300px;
+  }
+}
+
 /* Story page */
 .story-page .story-banner {
   display: flex;
@@ -1008,4 +1042,74 @@ label {
 .pagination button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* Toasts — mounted once at the app root (outside both Reader/Admin shells),
+   so these rely only on the global :root vars, not the admin's --a-* ones. */
+.toast-stack {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-width: min(380px, calc(100vw - 2rem));
+}
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  font-size: 0.9rem;
+  color: var(--text);
+  animation: toast-in 0.2s ease-out;
+}
+.toast-error {
+  border-left: 4px solid var(--danger);
+}
+.toast-success {
+  border-left: 4px solid var(--success);
+}
+.toast-info {
+  border-left: 4px solid var(--accent);
+}
+.toast span {
+  flex: 1;
+  line-height: 1.4;
+}
+.toast-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.8rem;
+  line-height: 1;
+  width: auto;
+}
+.toast-close:hover {
+  background: none;
+  color: var(--text);
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 640px) {
+  .toast-stack {
+    left: 1rem;
+    right: 1rem;
+    max-width: none;
+  }
 }

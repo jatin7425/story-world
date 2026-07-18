@@ -53,6 +53,14 @@ export default function Story() {
 
   return (
     <div className="story-page">
+      {story.cover_image_url && (
+        <div
+          className="page-hero-bg"
+          style={{
+            backgroundImage: `linear-gradient(to bottom, transparent 0%, transparent 40%, var(--bg) 95%), url(${story.cover_image_url})`,
+          }}
+        />
+      )}
       <Breadcrumbs items={[{ label: "Home", to: "/" }, { label: story.title }]} />
 
       <div className="story-banner">

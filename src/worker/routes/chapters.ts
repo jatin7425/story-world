@@ -22,6 +22,7 @@ chaptersRoutes.get("/:slug/chapters/:number", async (c) => {
   return c.json({
     chapter: result.chapter,
     storyTitle: result.storyTitle,
+    storyCoverImageUrl: result.storyCoverImageUrl,
     likeCount: result.likeCount,
     likedByMe: result.likedByMe,
     nextChapterNumber: result.nextChapterNumber,

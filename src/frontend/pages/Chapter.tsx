@@ -20,6 +20,7 @@ export default function Chapter() {
   const [notFound, setNotFound] = useState(false);
   const [nextChapterNumber, setNextChapterNumber] = useState<number | null>(null);
   const [storyTitle, setStoryTitle] = useState<string | null>(null);
+  const [storyCoverImageUrl, setStoryCoverImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -39,6 +40,7 @@ export default function Chapter() {
         setLikedByMe(r.likedByMe);
         setNextChapterNumber(r.nextChapterNumber);
         setStoryTitle(r.storyTitle);
+        setStoryCoverImageUrl(r.storyCoverImageUrl);
       })
       .catch((err) => {
         if (err instanceof ApiError && err.locked) setLocked(true);
@@ -103,9 +105,18 @@ export default function Chapter() {
   if (notFound || !chapter) return <p>Chapter not found.</p>;
 
   const prevNumber = chapter.chapter_number > 1 ? chapter.chapter_number - 1 : null;
+  const heroImageUrl = chapter.image_url ?? storyCoverImageUrl;
 
   return (
     <div className="chapter-page">
+      {heroImageUrl && (
+        <div
+          className="page-hero-bg"
+          style={{
+            backgroundImage: `linear-gradient(to bottom, transparent 0%, transparent 40%, var(--bg) 95%), url(${heroImageUrl})`,
+          }}
+        />
+      )}
       <Breadcrumbs
         items={[
           { label: "Home", to: "/" },

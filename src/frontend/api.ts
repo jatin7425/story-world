@@ -1,3 +1,5 @@
+import { emitToast } from "./toastBus";
+
 export class ApiError extends Error {
   status: number;
   locked: boolean;
@@ -9,15 +11,27 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
-    ...options,
-    credentials: "include",
-    headers: { "Content-Type": "application/json", ...(options?.headers ?? {}) },
-  });
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      ...options,
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...(options?.headers ?? {}) },
+    });
+  } catch {
+    emitToast("Network error — check your connection and try again.", "error");
+    throw new ApiError("Network error", 0);
+  }
+
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const body = data as { error?: string; locked?: boolean };
-    throw new ApiError(body.error ?? `Request failed: ${res.status}`, res.status, !!body.locked);
+    const message = body.error ?? `Request failed: ${res.status}`;
+    // "locked" (paywall gate) is expected flow control, not a real error —
+    // callers already render a dedicated UI for it, so a red toast on top
+    // would just be noise.
+    if (!body.locked) emitToast(message, "error");
+    throw new ApiError(message, res.status, !!body.locked);
   }
   return data as T;
 }
@@ -106,6 +120,15 @@ export interface AdminUser {
   restrictions: RestrictionType[];
 }
 
+export interface AdminImage {
+  id: number;
+  filename: string | null;
+  content_type: string | null;
+  source_url: string | null;
+  r2_key?: string | null;
+  created_at: string;
+}
+
 export interface McpToken {
   id: number;
   name: string;
@@ -165,6 +188,7 @@ export const api = {
     request<{
       chapter: Chapter;
       storyTitle: string;
+      storyCoverImageUrl: string | null;
       likeCount: number;
       likedByMe: boolean;
       nextChapterNumber: number | null;
@@ -269,16 +293,20 @@ export const api = {
 
   // --- Admin: images ---
   adminListImages: (page?: number, limit?: number) =>
-    request<{ images: any[] } & PageMeta>(`/api/admin/images${qs({ page, limit })}`),
-  adminUploadImage: (input: FormData | { data_base64?: string; source_url?: string; filename?: string; content_type?: string }) => {
+    request<{ images: AdminImage[] } & PageMeta>(`/api/admin/images${qs({ page, limit })}`),
+  adminUploadImage: (
+    input: FormData | { data_base64?: string; source_url?: string; filename?: string; content_type?: string }
+  ) => {
     if (input instanceof FormData) {
       return fetch(`/api/admin/images`, { method: "POST", body: input, credentials: "include" }).then(async (res) => {
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new ApiError((data as any).error ?? `Request failed: ${res.status}`, res.status);
-        return data as { image: any };
+        if (!res.ok) {
+          throw new ApiError((data as { error?: string }).error ?? `Request failed: ${res.status}`, res.status);
+        }
+        return data as { image: AdminImage };
       });
     }
-    return request<{ image: any }>(`/api/admin/images`, { method: "POST", body: JSON.stringify(input) });
+    return request<{ image: AdminImage }>(`/api/admin/images`, { method: "POST", body: JSON.stringify(input) });
   },
   adminDeleteImage: (id: number) => request<{ ok: true }>(`/api/admin/images/${id}`, { method: "DELETE" }),
 

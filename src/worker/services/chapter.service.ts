@@ -11,6 +11,7 @@ export type ChapterResult =
       kind: "ok";
       chapter: ChapterRow;
       storyTitle: string;
+      storyCoverImageUrl: string | null;
       likeCount: number;
       likedByMe: boolean;
       nextChapterNumber: number | null;
@@ -46,7 +47,15 @@ export class ChapterService {
       this.chapters.findNextChapterNumber(story.id, chapterNumber),
     ]);
 
-    return { kind: "ok", chapter, storyTitle: story.title, likeCount, likedByMe, nextChapterNumber };
+    return {
+      kind: "ok",
+      chapter,
+      storyTitle: story.title,
+      storyCoverImageUrl: story.cover_image_url,
+      likeCount,
+      likedByMe,
+      nextChapterNumber,
+    };
   }
 
   /** Narrow lookup for SEO meta-tag rendering — skips the like/next-chapter queries getChapter does. */

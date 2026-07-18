@@ -1,82 +1,136 @@
 import { useEffect, useState } from "react";
-import { api } from "../api";
+import { api, type AdminImage } from "../api";
 
 export default function AdminImages() {
-  const [images, setImages] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [images, setImages] = useState<AdminImage[]>([]);
+  const [loading, setLoading] = useState(true);
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
-  const load = async () => {
+  const load = () => {
     setLoading(true);
+    api
+      .adminListImages(1, 50)
+      .then((r) => setImages(r.images))
+      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load images"))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(load, []);
+
+  const uploadFile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!file) return;
+    setUploading(true);
+    setError(null);
     try {
-      const res = await api.adminListImages(1, 50);
-      setImages(res.images ?? []);
-    } catch (e) {
-      // ignore
+      const form = new FormData();
+      form.append("file", file, file.name);
+      await api.adminUploadImage(form);
+      setFile(null);
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
-      setLoading(false);
+      setUploading(false);
     }
   };
 
-  useEffect(() => {
-    load();
-  }, []);
-
-  const handleFile = (f: File | null) => setFile(f);
-
-  const uploadFile = async () => {
-    if (!file) return;
-    const form = new FormData();
-    form.append("file", file, file.name);
-    await api.adminUploadImage(form);
-    setFile(null);
-    load();
-  };
-
-  const uploadUrl = async () => {
-    if (!url) return;
-    await api.adminUploadImage({ source_url: url });
-    setUrl("");
-    load();
+  const uploadUrl = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!url.trim()) return;
+    setUploading(true);
+    setError(null);
+    try {
+      await api.adminUploadImage({ source_url: url.trim() });
+      setUrl("");
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const remove = async (id: number) => {
+    if (!confirm("Delete this image? Anything still referencing its URL will break.")) return;
     await api.adminDeleteImage(id);
     load();
   };
 
+  const copyUrl = (id: number) => {
+    const fullUrl = `${window.location.origin}/images/${id}`;
+    navigator.clipboard.writeText(fullUrl).then(() => {
+      setCopiedId(id);
+      setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1500);
+    });
+  };
+
   return (
-    <div>
-      <h2>Images</h2>
-      <div style={{ marginBottom: 16 }}>
-        <input type="file" onChange={(e) => handleFile(e.target.files?.[0] ?? null)} />
-        <button onClick={uploadFile} disabled={!file}>
-          Upload File
-        </button>
-      </div>
-      <div style={{ marginBottom: 16 }}>
-        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Image URL to fetch" style={{ width: 400 }} />
-        <button onClick={uploadUrl} disabled={!url}>
-          Upload from URL
-        </button>
+    <div className="admin-dashboard">
+      <h1>Images</h1>
+      <p className="admin-subtitle">
+        Upload images to use as story covers or chapter illustrations, then copy the URL into that story/chapter's
+        image field.
+      </p>
+
+      <div className="admin-card">
+        <h2>Upload</h2>
+        <form onSubmit={uploadFile} className="admin-inline-form">
+          <label>
+            From your device
+            <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+          </label>
+          <button type="submit" disabled={!file || uploading}>
+            {uploading ? "Uploading…" : "Upload file"}
+          </button>
+        </form>
+        <form onSubmit={uploadUrl} className="admin-inline-form">
+          <label>
+            From a URL
+            <input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://example.com/image.jpg"
+            />
+          </label>
+          <button type="submit" disabled={!url.trim() || uploading}>
+            {uploading ? "Fetching…" : "Fetch from URL"}
+          </button>
+        </form>
+        {error && <p className="error">{error}</p>}
       </div>
 
+      <h2 className="admin-list-heading">Uploaded images ({images.length})</h2>
       {loading ? (
         <p>Loading…</p>
+      ) : images.length === 0 ? (
+        <p className="admin-empty">No images uploaded yet.</p>
       ) : (
-        <ul>
+        <div className="admin-image-grid">
           {images.map((img) => (
-            <li key={img.id} style={{ marginBottom: 12 }}>
-              <div>
-                <img src={`/images/${img.id}`} alt={img.filename ?? "image"} style={{ maxWidth: 200, display: "block" }} />
-                <div>{img.filename}</div>
-                <div>{img.content_type}</div>
-                <button onClick={() => remove(img.id)}>Delete</button>
+            <div key={img.id} className="admin-image-card">
+              <div className="admin-image-thumb-wrap">
+                <img src={`/images/${img.id}`} alt={img.filename ?? ""} className="admin-image-thumb-full" />
               </div>
-            </li>
+              <div className="admin-image-meta">
+                <div className="admin-image-name">{img.filename || `Image #${img.id}`}</div>
+                {img.content_type && <span className="admin-badge">{img.content_type}</span>}
+              </div>
+              <div className="admin-row-actions">
+                <button type="button" className="admin-btn-ghost" onClick={() => copyUrl(img.id)}>
+                  {copiedId === img.id ? "Copied ✓" : "Copy URL"}
+                </button>
+                <button type="button" className="admin-btn-danger" onClick={() => remove(img.id)}>
+                  Delete
+                </button>
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

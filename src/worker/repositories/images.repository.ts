@@ -8,6 +8,13 @@ export interface ImageRow {
   created_at: string;
 }
 
+// D1 rejects a single column value beyond ~1MB (SQLITE_TOOBIG) — images are
+// stored base64-inline (~4/3 size inflation vs. raw bytes), so cap well
+// under that. Enforced here (not just in routes/admin-images.ts) so every
+// caller is covered, including the MCP upload tools which call create()
+// directly. A real object-storage backend (R2) would remove this ceiling.
+export const MAX_IMAGE_BASE64_LENGTH = 700_000; // ~500KB raw
+
 export interface IImagesRepository {
   create(filename: string | null, contentType: string | null, dataBase64: string | null, sourceUrl: string | null): Promise<ImageRow>;
   findById(id: number): Promise<ImageRow | null>;
@@ -19,6 +26,12 @@ export class ImagesRepository implements IImagesRepository {
   constructor(private readonly db: D1Database, private readonly r2?: any) {}
 
   async create(filename: string | null, contentType: string | null, dataBase64: string | null, sourceUrl: string | null): Promise<ImageRow> {
+    if (dataBase64 && dataBase64.length > MAX_IMAGE_BASE64_LENGTH) {
+      const approxMb = ((dataBase64.length * 3) / 4 / 1_000_000).toFixed(1);
+      const maxMb = ((MAX_IMAGE_BASE64_LENGTH * 3) / 4 / 1_000_000).toFixed(1);
+      throw new Error(`Image is ~${approxMb}MB — please use one under ${maxMb}MB.`);
+    }
+
     const row = await this.db
       .prepare(
         `INSERT INTO images (filename, content_type, data_base64, source_url, r2_key)
