@@ -32,6 +32,8 @@ authRoutes.post("/signup", async (c) => {
     username?: string;
     mobile?: string;
     gender?: string;
+    preferred_lang?: string;
+    secondary_lang?: string;
   }>();
   const email = body.email?.toLowerCase().trim();
   if (!email || !email.includes("@")) return c.json({ error: "Valid email required" }, 400);
@@ -42,6 +44,8 @@ authRoutes.post("/signup", async (c) => {
     username: body.username?.trim() || null,
     mobile: body.mobile?.trim() || null,
     gender: body.gender || null,
+    preferred_lang: body.preferred_lang || null,
+    secondary_lang: body.secondary_lang || null,
   });
   if ("error" in result) return c.json({ error: result.error }, result.status);
 

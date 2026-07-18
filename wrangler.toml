@@ -13,10 +13,19 @@ database_name = "story_worlds_db"
 database_id = "0649d910-55c8-4afe-8d8d-91d7429bb5b9"
 migrations_dir = "migrations"
 
+[ai]
+binding = "AI"
 
 # Secrets (set via `wrangler secret put <NAME>`, do not put real values here):
-#   RESEND_API_KEY   - for sending magic-link emails
-#   SESSION_SECRET   - random string used to sign session tokens
+#   RESEND_API_KEY      - for sending magic-link emails
+#   SESSION_SECRET      - random string used to sign session tokens
+#   GROQ_API_KEY_1..N    - free-tier Groq keys, tried in order as a translation
+#                          fallback after Workers AI (see [ai] binding above)
+#   GEMINI_API_KEY_1..N  - free-tier Gemini keys, tried after Groq keys
+#   AION_API_KEY_1..N    - last-resort fallback, tried ONLY when Workers AI/
+#                          Groq/Gemini all refuse a translation on policy/
+#                          safety grounds (not for quota/network failures,
+#                          which the Groq->Gemini chain already covers)
 #
 # AI-authored content comes in via the MCP endpoint (see /@dm!n/mcp for docs
 # and token management) rather than a built-in provider — connect Claude,

@@ -3,6 +3,8 @@ import type { IChaptersRepository } from "../repositories/chapters.repository";
 import type { ICommentsRepository } from "../repositories/comments.repository";
 import type { ILikesRepository } from "../repositories/likes.repository";
 import type { IFollowsRepository } from "../repositories/follows.repository";
+import type { IStoryTranslationsRepository } from "../repositories/story-translations.repository";
+import type { IChapterTranslationsRepository } from "../repositories/chapter-translations.repository";
 import type { StoryRow, ChapterRow, ChapterSummaryRow, ChapterContentFormat } from "../repositories/types";
 import { slugify } from "../lib/slugify";
 import { toPaginated, type Paginated } from "../lib/pagination";
@@ -61,7 +63,9 @@ export class AdminStoryService {
     private readonly chapters: IChaptersRepository,
     private readonly comments: ICommentsRepository,
     private readonly likes: ILikesRepository,
-    private readonly follows: IFollowsRepository
+    private readonly follows: IFollowsRepository,
+    private readonly storyTranslations: IStoryTranslationsRepository,
+    private readonly chapterTranslations: IChapterTranslationsRepository
   ) {}
 
   async listStories(page: number, limit: number): Promise<Paginated<StoryRow>> {
@@ -86,8 +90,14 @@ export class AdminStoryService {
     });
   }
 
-  updateStory(id: number, patch: UpdateStoryAdminInput): Promise<StoryRow | null> {
-    return this.stories.update(id, patch);
+  async updateStory(id: number, patch: UpdateStoryAdminInput): Promise<StoryRow | null> {
+    const updated = await this.stories.update(id, patch);
+    // Any cached translation of the old title/description is now stale.
+    if (updated && (patch.title !== undefined || patch.description !== undefined)) {
+      await this.storyTranslations.deleteForStory(id);
+      await this.stories.resetLang(id);
+    }
+    return updated;
   }
 
   async deleteStory(id: number): Promise<void> {
@@ -95,6 +105,8 @@ export class AdminStoryService {
     const chapterIds = chapters.map((c) => c.id);
     await this.comments.deleteForChapters(chapterIds);
     await this.likes.deleteForChapters(chapterIds);
+    await this.chapterTranslations.deleteForChapters(chapterIds);
+    await this.storyTranslations.deleteForStory(id);
     await this.chapters.deleteAllForStory(id);
     await this.follows.deleteForStory(id);
     await this.stories.delete(id);
@@ -141,7 +153,7 @@ export class AdminStoryService {
     const content =
       patch.content !== undefined ? await resolveContent(patch.content, contentFormat) : existing.content;
 
-    return this.chapters.updateContent(
+    const updated = await this.chapters.updateContent(
       storyId,
       chapterNumber,
       patch.title !== undefined ? patch.title : existing.title,
@@ -149,6 +161,12 @@ export class AdminStoryService {
       contentFormat,
       patch.imageUrl !== undefined ? patch.imageUrl : existing.image_url
     );
+    // Any cached translation of the old title/content is now stale.
+    if (updated && (patch.title !== undefined || patch.content !== undefined)) {
+      await this.chapterTranslations.deleteForChapter(existing.id);
+      await this.chapters.resetLang(existing.id);
+    }
+    return updated;
   }
 
   async deleteChapter(storyId: number, chapterNumber: number): Promise<void> {
@@ -156,6 +174,7 @@ export class AdminStoryService {
     if (!chapter) return;
     await this.comments.deleteForChapters([chapter.id]);
     await this.likes.deleteForChapters([chapter.id]);
+    await this.chapterTranslations.deleteForChapter(chapter.id);
     await this.chapters.deleteByStoryAndNumber(storyId, chapterNumber);
   }
 

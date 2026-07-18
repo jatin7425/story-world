@@ -1,7 +1,7 @@
 import type { ChapterRow, ChapterSummaryRow, ChapterStatus, ChapterContentFormat } from "./types";
 
 const CHAPTER_COLUMNS =
-  "id, story_id, chapter_number, title, content, content_format, generated_by, status, image_url, created_at";
+  "id, story_id, chapter_number, title, content, content_format, generated_by, status, image_url, lang, created_at";
 const CHAPTER_SUMMARY_COLUMNS = "id, chapter_number, title, status, generated_by, image_url, created_at";
 
 export interface ChapterSummaryPage {
@@ -30,6 +30,7 @@ export interface IChaptersRepository {
   /** Full rows (incl. content), all statuses, ascending order — MCP read tool use. */
   listFullByStory(storyId: number): Promise<ChapterRow[]>;
   findByStoryAndNumber(storyId: number, chapterNumber: number): Promise<ChapterRow | null>;
+  findById(id: number): Promise<ChapterRow | null>;
   /** Smallest *published* chapter_number greater than `afterNumber` — survives gaps left by deletion or still-draft chapters. */
   findNextChapterNumber(storyId: number, afterNumber: number): Promise<number | null>;
   maxChapterNumber(storyId: number): Promise<number>;
@@ -45,6 +46,10 @@ export interface IChaptersRepository {
   updateStatus(storyId: number, chapterNumber: number, status: ChapterStatus): Promise<ChapterRow | null>;
   deleteByStoryAndNumber(storyId: number, chapterNumber: number): Promise<void>;
   deleteAllForStory(storyId: number): Promise<void>;
+  /** Dedupe-appends a lang code to the comma-separated `lang` column (e.g. after a translation job succeeds). */
+  addLang(id: number, lang: string): Promise<void>;
+  /** Resets `lang` back to just "en" (e.g. after the source title/content was edited, invalidating cached translations). */
+  resetLang(id: number): Promise<void>;
 }
 
 export class ChaptersRepository implements IChaptersRepository {
@@ -100,6 +105,11 @@ export class ChaptersRepository implements IChaptersRepository {
       .prepare(`SELECT ${CHAPTER_COLUMNS} FROM chapters WHERE story_id = ? AND chapter_number = ?`)
       .bind(storyId, chapterNumber)
       .first<ChapterRow>();
+    return row ?? null;
+  }
+
+  async findById(id: number): Promise<ChapterRow | null> {
+    const row = await this.db.prepare(`SELECT ${CHAPTER_COLUMNS} FROM chapters WHERE id = ?`).bind(id).first<ChapterRow>();
     return row ?? null;
   }
 
@@ -184,5 +194,18 @@ export class ChaptersRepository implements IChaptersRepository {
 
   async deleteAllForStory(storyId: number): Promise<void> {
     await this.db.prepare("DELETE FROM chapters WHERE story_id = ?").bind(storyId).run();
+  }
+
+  async addLang(id: number, lang: string): Promise<void> {
+    const row = await this.db.prepare("SELECT lang FROM chapters WHERE id = ?").bind(id).first<{ lang: string }>();
+    if (!row) return;
+    const langs = new Set(row.lang.split(",").filter(Boolean));
+    if (langs.has(lang)) return;
+    langs.add(lang);
+    await this.db.prepare("UPDATE chapters SET lang = ? WHERE id = ?").bind([...langs].join(","), id).run();
+  }
+
+  async resetLang(id: number): Promise<void> {
+    await this.db.prepare("UPDATE chapters SET lang = 'en' WHERE id = ?").bind(id).run();
   }
 }

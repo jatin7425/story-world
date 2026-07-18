@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, type ChapterSummary } from "../api";
+import { api, type ChapterSummary, type Lang, type TranslationJobWithItems } from "../api";
+import { LANG_NAMES } from "../LocaleContext";
 import { ADMIN_PATH } from "../adminPath";
 import AdminPagination from "./AdminPagination";
 import RefreshButton from "./RefreshButton";
+import TranslationJobProgress from "./TranslationJobProgress";
+
+const TRANSLATABLE_LANGS: Lang[] = ["hi", "ja", "ko"];
 
 export default function StoryChapters({ storyId }: { storyId: number }) {
   const [chapters, setChapters] = useState<ChapterSummary[]>([]);
@@ -12,6 +16,12 @@ export default function StoryChapters({ storyId }: { storyId: number }) {
   const [limit, setLimit] = useState(10);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+
+  const [selectedChapters, setSelectedChapters] = useState<Set<number>>(new Set());
+  const [selectedLangs, setSelectedLangs] = useState<Set<Lang>>(new Set());
+  const [includeStory, setIncludeStory] = useState(false);
+  const [translateError, setTranslateError] = useState<string | null>(null);
+  const [activeJob, setActiveJob] = useState<TranslationJobWithItems | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -39,6 +49,63 @@ export default function StoryChapters({ storyId }: { storyId: number }) {
     load();
   };
 
+  const toggleChapterSelected = (id: number) => {
+    setSelectedChapters((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleLangSelected = (lang: Lang) => {
+    setSelectedLangs((prev) => {
+      const next = new Set(prev);
+      if (next.has(lang)) next.delete(lang);
+      else next.add(lang);
+      return next;
+    });
+  };
+
+  const allOnPageSelected = chapters.length > 0 && chapters.every((c) => selectedChapters.has(c.id));
+  const toggleSelectAllOnPage = () => {
+    setSelectedChapters((prev) => {
+      const next = new Set(prev);
+      if (allOnPageSelected) chapters.forEach((c) => next.delete(c.id));
+      else chapters.forEach((c) => next.add(c.id));
+      return next;
+    });
+  };
+
+  const startTranslation = async () => {
+    setTranslateError(null);
+    if (selectedLangs.size === 0) {
+      setTranslateError("Select at least one language.");
+      return;
+    }
+    if (selectedChapters.size === 0 && !includeStory) {
+      setTranslateError("Select at least one chapter, or the story description.");
+      return;
+    }
+    try {
+      const job = await api.createTranslationJob({
+        storyId,
+        chapterIds: [...selectedChapters],
+        includeStory,
+        langs: [...selectedLangs],
+      });
+      setActiveJob(job);
+    } catch (err) {
+      setTranslateError(err instanceof Error ? err.message : "Failed to start translation job");
+    }
+  };
+
+  const closeJobProgress = () => {
+    setActiveJob(null);
+    setSelectedChapters(new Set());
+    load();
+  };
+
   return (
     <div className="admin-chapters">
       <div className="admin-list-toolbar">
@@ -47,6 +114,26 @@ export default function StoryChapters({ storyId }: { storyId: number }) {
           + Add chapter
         </Link>
       </div>
+
+      <div className="admin-translate-panel">
+        <div className="admin-translate-panel-langs">
+          {TRANSLATABLE_LANGS.map((l) => (
+            <label key={l}>
+              <input type="checkbox" checked={selectedLangs.has(l)} onChange={() => toggleLangSelected(l)} />
+              {LANG_NAMES[l]}
+            </label>
+          ))}
+        </div>
+        <label>
+          <input type="checkbox" checked={includeStory} onChange={(e) => setIncludeStory(e.target.checked)} />
+          Include story description
+        </label>
+        <span className="admin-user-email">{selectedChapters.size} chapter(s) selected</span>
+        <button type="button" onClick={startTranslation}>
+          Translate selected
+        </button>
+      </div>
+      {translateError && <p className="error">{translateError}</p>}
 
       {loading ? (
         <p>Loading chapters…</p>
@@ -57,6 +144,9 @@ export default function StoryChapters({ storyId }: { storyId: number }) {
           <table className="admin-table">
             <thead>
               <tr>
+                <th className="admin-chapter-select-col">
+                  <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAllOnPage} aria-label="Select all on this page" />
+                </th>
                 <th>#</th>
                 <th>Title</th>
                 <th>Status</th>
@@ -67,6 +157,14 @@ export default function StoryChapters({ storyId }: { storyId: number }) {
             <tbody>
               {chapters.map((c) => (
                 <tr key={c.id}>
+                  <td className="admin-chapter-select-col" data-label="">
+                    <input
+                      type="checkbox"
+                      checked={selectedChapters.has(c.id)}
+                      onChange={() => toggleChapterSelected(c.id)}
+                      aria-label={`Select chapter ${c.chapter_number}`}
+                    />
+                  </td>
                   <td data-label="#">{c.chapter_number}</td>
                   <td className="admin-chapter-title-cell" data-label="Title">
                     {c.image_url && <img src={c.image_url} alt="" className="admin-chapter-thumb" />}
@@ -107,6 +205,8 @@ export default function StoryChapters({ storyId }: { storyId: number }) {
           setPage(1);
         }}
       />
+
+      {activeJob && <TranslationJobProgress jobId={activeJob.job.id} initialJob={activeJob} onClose={closeJobProgress} />}
     </div>
   );
 }

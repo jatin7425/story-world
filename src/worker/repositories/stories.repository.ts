@@ -1,7 +1,7 @@
 import type { StoryRow } from "./types";
 
 const STORY_COLUMNS = `id, title, slug, description, cover_image_url, author_id, status,
-                        free_chapter_count, is_ai_generated, ai_generation_prompt, tags, created_via, created_at`;
+                        free_chapter_count, is_ai_generated, ai_generation_prompt, tags, created_via, lang, created_at`;
 
 export interface CreateStoryInput {
   title: string;
@@ -40,6 +40,10 @@ export interface IStoriesRepository {
   delete(id: number): Promise<void>;
   /** Word-wise match across title/description/tags — every word in the query must appear somewhere. */
   search(words: string[], limit: number, offset: number): Promise<StoryPage>;
+  /** Dedupe-appends a lang code to the comma-separated `lang` column (e.g. after a translation job succeeds). */
+  addLang(id: number, lang: string): Promise<void>;
+  /** Resets `lang` back to just "en" (e.g. after the source title/description was edited, invalidating cached translations). */
+  resetLang(id: number): Promise<void>;
 }
 
 export class StoriesRepository implements IStoriesRepository {
@@ -173,5 +177,18 @@ export class StoriesRepository implements IStoriesRepository {
         .first<{ count: number }>(),
     ]);
     return { items: results, total: countRow?.count ?? 0 };
+  }
+
+  async addLang(id: number, lang: string): Promise<void> {
+    const row = await this.db.prepare("SELECT lang FROM stories WHERE id = ?").bind(id).first<{ lang: string }>();
+    if (!row) return;
+    const langs = new Set(row.lang.split(",").filter(Boolean));
+    if (langs.has(lang)) return;
+    langs.add(lang);
+    await this.db.prepare("UPDATE stories SET lang = ? WHERE id = ?").bind([...langs].join(","), id).run();
+  }
+
+  async resetLang(id: number): Promise<void> {
+    await this.db.prepare("UPDATE stories SET lang = 'en' WHERE id = ?").bind(id).run();
   }
 }

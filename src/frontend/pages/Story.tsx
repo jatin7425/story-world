@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, type ChapterSummary, type Story as StoryType } from "../api";
 import { useAuth } from "../AuthContext";
+import { useLocale, LANG_NAMES } from "../LocaleContext";
 import Breadcrumbs from "../Breadcrumbs";
 import Pagination from "../Pagination";
 
 export default function Story() {
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
+  const { lang } = useLocale();
   const [story, setStory] = useState<StoryType | null>(null);
   const [chapters, setChapters] = useState<ChapterSummary[]>([]);
   const [chapterPage, setChapterPage] = useState(1);
@@ -17,28 +19,47 @@ export default function Story() {
   const [followersCount, setFollowersCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [descExpanded, setDescExpanded] = useState(false);
+  const [notTranslatedInto, setNotTranslatedInto] = useState<string | null>(null);
 
-  const load = () => {
+  const load = async () => {
     if (!slug) return;
     setLoading(true);
-    api
-      .getStory(slug, chapterPage)
-      .then((r) => {
-        setStory(r.story);
-        setChapters(r.chapters);
-        setChapterTotalPages(r.chaptersTotalPages);
-        setChaptersTotal(r.chaptersTotal);
-        setIsFollowing(r.isFollowing);
-        setFollowersCount(r.followersCount);
-      })
-      .finally(() => setLoading(false));
+    try {
+      let result = await api.getStory(slug, chapterPage, lang === "en" ? undefined : lang);
+      let shownLang = lang;
+
+      // Requested language isn't cached yet — try the account's secondary
+      // language (if set and different) before falling back to English.
+      if (!result.translationAvailable && lang !== "en") {
+        const secondary = user?.secondary_lang;
+        if (secondary && secondary !== lang && secondary !== "en") {
+          const retry = await api.getStory(slug, chapterPage, secondary);
+          if (retry.translationAvailable) {
+            result = retry;
+            shownLang = secondary;
+          }
+        }
+      }
+
+      setStory(result.story);
+      setChapters(result.chapters);
+      setChapterTotalPages(result.chaptersTotalPages);
+      setChaptersTotal(result.chaptersTotal);
+      setIsFollowing(result.isFollowing);
+      setFollowersCount(result.followersCount);
+      setNotTranslatedInto(!result.translationAvailable && shownLang !== "en" ? LANG_NAMES[shownLang] : null);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     setChapterPage(1);
     setDescExpanded(false);
   }, [slug]);
-  useEffect(load, [slug, chapterPage]);
+  useEffect(() => {
+    load();
+  }, [slug, chapterPage, lang]);
 
   const toggleFollow = async () => {
     if (!slug) return;
@@ -70,6 +91,9 @@ export default function Story() {
         />
       )}
       <Breadcrumbs items={[{ label: "Home", to: "/" }, { label: story.title }]} />
+      {notTranslatedInto && (
+        <p className="translation-note">Not translated into {notTranslatedInto} yet — showing English.</p>
+      )}
 
       <div className={story.cover_image_url ? "story-banner" : "story-banner no-cover"}>
         {story.cover_image_url && (

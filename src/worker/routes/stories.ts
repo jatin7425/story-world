@@ -16,7 +16,8 @@ storiesRoutes.get("/", async (c) => {
 storiesRoutes.get("/:slug", async (c) => {
   const user = await getCurrentUser(c);
   const { page = 1, limit = 10 } = parseReaderPagination(c);
-  const detail = await c.get("services").storyService.getStoryDetail(c.req.param("slug"), user?.id ?? null, page, limit);
+  const lang = c.req.query("lang") ?? "en";
+  const detail = await c.get("services").storyService.getStoryDetail(c.req.param("slug"), user?.id ?? null, page, limit, lang);
   if (!detail) return c.json({ error: "Story not found" }, 404);
 
   const { chapters, ...rest } = detail;

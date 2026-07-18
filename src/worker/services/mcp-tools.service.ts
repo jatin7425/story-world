@@ -1,6 +1,7 @@
 import type { IStoriesRepository } from "../repositories/stories.repository";
 import type { IChaptersRepository } from "../repositories/chapters.repository";
 import type { IImagesRepository } from "../repositories/images.repository";
+import type { IChapterTranslationsRepository } from "../repositories/chapter-translations.repository";
 import { slugify } from "../lib/slugify";
 
 export interface McpToolResult {
@@ -28,7 +29,8 @@ export class McpToolsService {
   constructor(
     private readonly stories: IStoriesRepository,
     private readonly chapters: IChaptersRepository,
-    private readonly images: IImagesRepository
+    private readonly images: IImagesRepository,
+    private readonly chapterTranslations: IChapterTranslationsRepository
   ) {}
 
   async listStories(): Promise<McpToolResult> {
@@ -173,6 +175,9 @@ export class McpToolsService {
     const imageUrl = typeof args.image_url === "string" ? args.image_url.trim() || null : chapter.image_url;
 
     const updated = await this.chapters.updateContent(story.id, chapterNumber, title, content, "markdown", imageUrl);
+    // Draft edits still invalidate any cached translation of the old content.
+    await this.chapterTranslations.deleteForChapter(chapter.id);
+    await this.chapters.resetLang(chapter.id);
 
     return ok({
       message: `Updated draft chapter ${chapterNumber} of "${story.title}".`,

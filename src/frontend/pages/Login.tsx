@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { api, type Gender } from "../api";
+import { api, type Gender, type Lang } from "../api";
 import { useAuth } from "../AuthContext";
+import { LANG_NAMES } from "../LocaleContext";
 import PasswordInput from "../PasswordInput";
+
+const LANG_OPTIONS: Lang[] = ["en", "hi", "ja", "ko"];
 
 type Mode = "magic" | "password-login" | "password-signup";
 
@@ -17,6 +20,8 @@ export default function Login() {
   const [username, setUsername] = useState("");
   const [mobile, setMobile] = useState("");
   const [gender, setGender] = useState<Gender | "">("");
+  const [preferredLang, setPreferredLang] = useState<Lang>("en");
+  const [secondaryLang, setSecondaryLang] = useState<Lang | "">("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -63,6 +68,8 @@ export default function Login() {
         username: username || undefined,
         mobile: mobile || undefined,
         gender: gender || undefined,
+        preferred_lang: preferredLang,
+        secondary_lang: secondaryLang || undefined,
       });
       await afterLogin();
     } catch (err) {
@@ -193,6 +200,27 @@ export default function Login() {
                 <option value="male">Male</option>
                 <option value="female">Female</option>
                 <option value="other">Other</option>
+              </select>
+            </label>
+            <label>
+              Preferred reading language
+              <select value={preferredLang} onChange={(e) => setPreferredLang(e.target.value as Lang)}>
+                {LANG_OPTIONS.map((l) => (
+                  <option key={l} value={l}>
+                    {LANG_NAMES[l]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Secondary language (optional)
+              <select value={secondaryLang} onChange={(e) => setSecondaryLang(e.target.value as Lang | "")}>
+                <option value="">None</option>
+                {LANG_OPTIONS.map((l) => (
+                  <option key={l} value={l}>
+                    {LANG_NAMES[l]}
+                  </option>
+                ))}
               </select>
             </label>
             <button type="submit" disabled={submitting}>

@@ -9,7 +9,8 @@ export const chapterActionsRoutes = new Hono<AppEnv>();
 chaptersRoutes.get("/:slug/chapters/:number", async (c) => {
   const user = await getCurrentUser(c);
   const number = Number(c.req.param("number"));
-  const result = await c.get("services").chapterService.getChapter(c.req.param("slug"), number, user?.id ?? null);
+  const lang = c.req.query("lang") ?? "en";
+  const result = await c.get("services").chapterService.getChapter(c.req.param("slug"), number, user?.id ?? null, lang);
 
   if (result.kind === "not_found") return c.json({ error: "Chapter not found" }, 404);
   if (result.kind === "locked") {
@@ -26,6 +27,8 @@ chaptersRoutes.get("/:slug/chapters/:number", async (c) => {
     likeCount: result.likeCount,
     likedByMe: result.likedByMe,
     nextChapterNumber: result.nextChapterNumber,
+    translationLang: result.translationLang,
+    translationAvailable: result.translationAvailable,
   });
 });
 

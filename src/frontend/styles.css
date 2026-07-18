@@ -186,6 +186,26 @@ a {
   color: var(--accent) !important;
 }
 
+.lang-switcher {
+  height: 2.1rem;
+  flex-shrink: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lang-switcher:hover {
+  border-color: var(--accent);
+}
+.lang-switcher-drawer {
+  width: 100%;
+  height: 2.6rem;
+}
+
 /* Mobile hamburger + slide-out drawer (hidden on desktop) */
 .menu-toggle {
   display: none;
@@ -898,6 +918,16 @@ label {
   font-size: 0.85em;
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+.translation-note {
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 0.5rem 0.85rem;
+  margin: 0 0 1rem;
 }
 
 /* Chapter reading page */
