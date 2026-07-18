@@ -659,7 +659,7 @@ label {
    image -> story cover -> nothing) is resolved in the component; this class
    just renders whatever URL it's given. Sits flush under the sticky header
    via the negative top margin, which assumes it's the first child of
-   .app-main (padding-top: 2rem) — if that padding ever changes, update this.
+   .app-main (padding-top: 4rem) — if that padding ever changes, update this.
 
    margin-left/right: calc(50% - 50vw) — NOT the naive "left:50%;margin-left:
    -50vw" version. That only cancels out correctly when the element's own
@@ -671,7 +671,7 @@ label {
   width: 100vw;
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
-  margin-top: -2rem;
+  margin-top: -4rem;
   margin-bottom: 2rem;
   height: 42vh;
   min-height: 240px;

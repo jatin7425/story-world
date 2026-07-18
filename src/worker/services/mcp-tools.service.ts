@@ -217,8 +217,12 @@ export class McpToolsService {
     for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
     const b64 = typeof globalThis.btoa === "function" ? globalThis.btoa(binary) : Buffer.from(binary, "binary").toString("base64");
 
-    const row = await this.images.create(filename, contentType, b64, url);
-    return ok({ image_path: `/images/${row.id}`, id: row.id });
+    try {
+      const row = await this.images.create(filename, contentType, b64, url);
+      return ok({ image_path: `/images/${row.id}`, id: row.id });
+    } catch (err) {
+      return fail(err instanceof Error ? err.message : "Failed to save image");
+    }
   }
 
   async uploadImageFromData(args: { data_base64?: unknown; filename?: unknown; content_type?: unknown }): Promise<McpToolResult> {
@@ -239,7 +243,11 @@ export class McpToolsService {
       return fail("data_base64 is not valid base64.");
     }
 
-    const row = await this.images.create(filename, contentType, dataBase64, null);
-    return ok({ image_path: `/images/${row.id}`, id: row.id });
+    try {
+      const row = await this.images.create(filename, contentType, dataBase64, null);
+      return ok({ image_path: `/images/${row.id}`, id: row.id });
+    } catch (err) {
+      return fail(err instanceof Error ? err.message : "Failed to save image");
+    }
   }
 }
