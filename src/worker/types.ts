@@ -30,4 +30,5 @@ export interface AuthUser {
   gender: Gender | null;
   avatar_url: string;
   birthdate: string | null;
+  created_at: string;
 }

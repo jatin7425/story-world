@@ -1,6 +1,7 @@
 import type { IFollowsRepository } from "../repositories/follows.repository";
 import type { ICommentsRepository } from "../repositories/comments.repository";
 import type { IUsersRepository } from "../repositories/users.repository";
+import type { ILikesRepository } from "../repositories/likes.repository";
 import type { AuthUser } from "../types";
 import type { StoryRow, ProfileCommentRow } from "../repositories/types";
 import { toAuthUser, randomAvatarSeed, isGender } from "../lib/avatar";
@@ -10,13 +11,15 @@ export interface ProfileData {
   user: AuthUser;
   followedStories: Paginated<Pick<StoryRow, "id" | "title" | "slug" | "cover_image_url">>;
   recentComments: Paginated<ProfileCommentRow>;
+  likesGiven: number;
 }
 
 export class ProfileService {
   constructor(
     private readonly follows: IFollowsRepository,
     private readonly comments: ICommentsRepository,
-    private readonly users: IUsersRepository
+    private readonly users: IUsersRepository,
+    private readonly likes: ILikesRepository
   ) {}
 
   async getProfile(
@@ -25,15 +28,34 @@ export class ProfileService {
     commentsPage: number,
     limit: number
   ): Promise<ProfileData> {
-    const [followedResult, commentsResult] = await Promise.all([
+    const [followedResult, commentsResult, likesGiven] = await Promise.all([
       this.follows.listStoriesForUser(user.id, limit, (followedPage - 1) * limit),
       this.comments.listRecentForUser(user.id, limit, (commentsPage - 1) * limit),
+      this.likes.countForUser(user.id),
     ]);
     return {
       user,
       followedStories: toPaginated(followedResult.items, followedResult.total, followedPage, limit),
       recentComments: toPaginated(commentsResult.items, commentsResult.total, commentsPage, limit),
+      likesGiven,
     };
+  }
+
+  async updateProfile(
+    userId: number,
+    displayName: string | null,
+    username: string | null
+  ): Promise<AuthUser | { error: string }> {
+    if (displayName && displayName.length > 50) return { error: "Display name must be 50 characters or fewer" };
+    if (username) {
+      if (!/^[A-Za-z0-9_]{3,9}$/.test(username)) {
+        return { error: "Username must be 3–9 characters: letters, numbers, or underscore" };
+      }
+      const taken = await this.users.findByUsername(username);
+      if (taken && taken.id !== userId) return { error: "Username is already taken" };
+    }
+    const updated = await this.users.updateProfile(userId, displayName, username);
+    return toAuthUser(updated);
   }
 
   /**

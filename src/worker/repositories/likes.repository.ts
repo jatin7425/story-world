@@ -1,5 +1,6 @@
 export interface ILikesRepository {
   countForChapter(chapterId: number): Promise<number>;
+  countForUser(userId: number): Promise<number>;
   isLikedBy(userId: number, chapterId: number): Promise<boolean>;
   like(userId: number, chapterId: number): Promise<void>;
   unlike(userId: number, chapterId: number): Promise<void>;
@@ -13,6 +14,14 @@ export class LikesRepository implements ILikesRepository {
     const row = await this.db
       .prepare("SELECT COUNT(*) as count FROM likes WHERE chapter_id = ?")
       .bind(chapterId)
+      .first<{ count: number }>();
+    return row?.count ?? 0;
+  }
+
+  async countForUser(userId: number): Promise<number> {
+    const row = await this.db
+      .prepare("SELECT COUNT(*) as count FROM likes WHERE user_id = ?")
+      .bind(userId)
       .first<{ count: number }>();
     return row?.count ?? 0;
   }

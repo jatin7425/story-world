@@ -52,6 +52,7 @@ export interface User {
   gender: Gender | null;
   avatar_url: string;
   birthdate: string | null;
+  created_at: string;
 }
 
 export interface Story {
@@ -241,11 +242,18 @@ export const api = {
       commentsTotal: number;
       commentsPage: number;
       commentsTotalPages: number;
+      likesGiven: number;
     }>(`/api/profile${qs({ followed_page: followedPage, comments_page: commentsPage })}`),
   updateGender: (gender: Gender | null) =>
     request<{ user: User }>("/api/profile/gender", { method: "PATCH", body: JSON.stringify({ gender }) }),
   updateBirthdate: (birthdate: string) =>
     request<{ user: User }>("/api/profile/birthdate", { method: "PATCH", body: JSON.stringify({ birthdate }) }),
+  updateProfile: (displayName: string | null, username: string | null) =>
+    request<{ user: User }>("/api/profile", {
+      method: "PATCH",
+      body: JSON.stringify({ display_name: displayName, username }),
+    }),
+  logoutAll: () => request<{ ok: true }>("/api/profile/logout-all", { method: "POST" }),
   changePassword: (currentPassword: string, newPassword: string) =>
     request<{ ok: true }>("/api/profile/password", {
       method: "PATCH",

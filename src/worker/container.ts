@@ -79,7 +79,7 @@ export function createContainer(env: Env) {
     authService: new AuthService(users, sessions, magicLinks, restrictions, env),
     adminStoryService: new AdminStoryService(stories, chapters, comments, likes, follows),
     adminUserService: new AdminUserService(users, restrictions, sessions),
-    profileService: new ProfileService(follows, comments, users),
+    profileService: new ProfileService(follows, comments, users, likes),
     mcpTokenService: new McpTokenService(mcpTokens),
     mcpToolsService: new McpToolsService(stories, chapters, images),
     imagesRepository: images,

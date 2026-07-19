@@ -129,6 +129,11 @@ export class AuthService {
     return { ok: true };
   }
 
+  /** Revokes every session for the user — "sign out everywhere". */
+  logoutAll(userId: number): Promise<void> {
+    return this.sessions.deleteAllForUser(userId);
+  }
+
   getCurrentUser(sessionToken: string | null): Promise<AuthUser | null> {
     if (!sessionToken) return Promise.resolve(null);
     return this.sessions.findActiveUserByToken(sessionToken);

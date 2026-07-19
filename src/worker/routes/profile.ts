@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { AppEnv } from "../hono-env";
 import { getCurrentUser } from "../lib/current-user";
 import { parseReaderPage } from "../lib/pagination";
+import { clearSessionCookie } from "../lib/session-cookie";
 
 export const profileRoutes = new Hono<AppEnv>();
 
@@ -22,7 +23,30 @@ profileRoutes.get("/", async (c) => {
     commentsTotal: profile.recentComments.total,
     commentsPage: profile.recentComments.page,
     commentsTotalPages: profile.recentComments.totalPages,
+    likesGiven: profile.likesGiven,
   });
+});
+
+profileRoutes.patch("/", async (c) => {
+  const user = await getCurrentUser(c);
+  if (!user) return c.json({ error: "Login required" }, 401);
+
+  const body = await c.req.json<{ display_name?: string | null; username?: string | null }>();
+  const displayName = body.display_name?.trim() || null;
+  const username = body.username?.trim() || null;
+
+  const result = await c.get("services").profileService.updateProfile(user.id, displayName, username);
+  if ("error" in result) return c.json(result, 400);
+  return c.json({ user: result });
+});
+
+profileRoutes.post("/logout-all", async (c) => {
+  const user = await getCurrentUser(c);
+  if (!user) return c.json({ error: "Login required" }, 401);
+
+  await c.get("services").authService.logoutAll(user.id);
+  clearSessionCookie(c);
+  return c.json({ ok: true });
 });
 
 profileRoutes.patch("/gender", async (c) => {

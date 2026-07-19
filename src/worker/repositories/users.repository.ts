@@ -28,6 +28,7 @@ export interface IUsersRepository {
   attachPassword(userId: number, input: CreatePasswordUserInput): Promise<UserRow>;
   updateGender(userId: number, gender: Gender | null, avatarSeed: number): Promise<UserRow>;
   updateBirthdate(userId: number, birthdate: string): Promise<UserRow>;
+  updateProfile(userId: number, displayName: string | null, username: string | null): Promise<UserRow>;
   updatePassword(userId: number, passwordHash: string): Promise<UserRow>;
   listAll(limit: number, offset: number): Promise<UserPage>;
 }
@@ -108,6 +109,14 @@ export class UsersRepository implements IUsersRepository {
     const row = await this.db
       .prepare(`UPDATE users SET gender = ?, avatar_seed = ? WHERE id = ? RETURNING ${USER_COLUMNS}`)
       .bind(gender, avatarSeed, userId)
+      .first<UserRow>();
+    return row!;
+  }
+
+  async updateProfile(userId: number, displayName: string | null, username: string | null): Promise<UserRow> {
+    const row = await this.db
+      .prepare(`UPDATE users SET display_name = ?, username = ? WHERE id = ? RETURNING ${USER_COLUMNS}`)
+      .bind(displayName, username, userId)
       .first<UserRow>();
     return row!;
   }
