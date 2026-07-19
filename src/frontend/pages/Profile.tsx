@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, type Story, type Comment, type User, type Gender } from "../api";
+import { api, type Story, type ProfileComment, type User, type Gender } from "../api";
 import { useAuth } from "../AuthContext";
 import PasswordInput from "../PasswordInput";
 import Pagination from "../Pagination";
@@ -9,7 +9,7 @@ type ProfileData = {
   user: User;
   followedStories: Story[];
   followedTotalPages: number;
-  recentComments: Comment[];
+  recentComments: ProfileComment[];
   commentsTotalPages: number;
 };
 
@@ -163,50 +163,85 @@ export default function Profile() {
   if (error) return <p>{error}</p>;
   if (!data) return <p>Loading...</p>;
 
+  const { user } = data;
+
   return (
     <div className="profile-page">
-      <div className="profile-header">
-        <img src={data.user.avatar_url} alt="" className="profile-avatar" />
-        <div>
-          <h1>{data.user.username ?? data.user.display_name ?? data.user.email}</h1>
-          <p className="profile-email">{data.user.email}</p>
-          <BirthdateRow user={data.user} onUpdated={(user) => setData((d) => d && { ...d, user })} />
-          <GenderSelector user={data.user} onUpdated={(user) => setData((d) => d && { ...d, user })} />
+      <div className="profile-header profile-card">
+        <img src={user.avatar_url} alt="" className="profile-avatar" />
+        <div className="profile-identity">
+          <h1>{user.username ?? user.display_name ?? user.email}</h1>
+          <p className="profile-email">{user.email}</p>
+          <div className="profile-chips">
+            {user.role !== "reader" && <span className="profile-chip profile-chip-role">{user.role}</span>}
+            {user.birthdate ? (
+              <span className="profile-chip profile-chip-verified">✓ Age verified</span>
+            ) : (
+              <span className="profile-chip">Age not verified</span>
+            )}
+          </div>
         </div>
       </div>
 
+      <div className="profile-card">
+        <BirthdateRow user={user} onUpdated={(u) => setData((d) => d && { ...d, user: u })} />
+        <GenderSelector user={user} onUpdated={(u) => setData((d) => d && { ...d, user: u })} />
+      </div>
+
       <h2>Change password</h2>
-      <ChangePasswordForm />
+      <div className="profile-card">
+        <ChangePasswordForm />
+      </div>
 
       <h2>Following</h2>
-      {data.followedStories.length === 0 ? (
-        <p>Not following any stories yet.</p>
-      ) : (
-        <>
-          <ul>
-            {data.followedStories.map((s) => (
-              <li key={s.id}>
-                <Link to={`/stories/${s.slug}`}>{s.title}</Link>
-              </li>
-            ))}
-          </ul>
-          <Pagination page={followedPage} totalPages={data.followedTotalPages} onChange={setFollowedPage} />
-        </>
-      )}
+      <div className="profile-card">
+        {data.followedStories.length === 0 ? (
+          <p className="empty-state">Not following any stories yet.</p>
+        ) : (
+          <>
+            <ul className="profile-follow-list">
+              {data.followedStories.map((s) => (
+                <li key={s.id}>
+                  <Link to={`/stories/${s.slug}`}>
+                    {s.cover_image_url ? (
+                      <img src={s.cover_image_url} alt="" className="follow-cover" />
+                    ) : (
+                      <span className="follow-cover follow-cover-placeholder" />
+                    )}
+                    <span>{s.title}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <Pagination page={followedPage} totalPages={data.followedTotalPages} onChange={setFollowedPage} />
+          </>
+        )}
+      </div>
 
       <h2>Recent comments</h2>
-      {data.recentComments.length === 0 ? (
-        <p>No comments yet.</p>
-      ) : (
-        <>
-          <ul>
-            {data.recentComments.map((c) => (
-              <li key={c.id}>{c.body}</li>
-            ))}
-          </ul>
-          <Pagination page={commentsPage} totalPages={data.commentsTotalPages} onChange={setCommentsPage} />
-        </>
-      )}
+      <div className="profile-card">
+        {data.recentComments.length === 0 ? (
+          <p className="empty-state">No comments yet.</p>
+        ) : (
+          <>
+            <ul className="profile-comment-list">
+              {data.recentComments.map((c) => (
+                <li key={c.id}>
+                  <p className="comment-body">{c.body}</p>
+                  <p className="comment-meta">
+                    on{" "}
+                    <Link to={`/stories/${c.story_slug}/chapters/${c.chapter_number}`}>
+                      {c.story_title} · Chapter {c.chapter_number}
+                    </Link>{" "}
+                    · {new Date(c.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <Pagination page={commentsPage} totalPages={data.commentsTotalPages} onChange={setCommentsPage} />
+          </>
+        )}
+      </div>
     </div>
   );
 }

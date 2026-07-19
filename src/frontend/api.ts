@@ -115,6 +115,15 @@ export interface Comment {
   email: string;
 }
 
+export interface ProfileComment {
+  id: number;
+  body: string;
+  created_at: string;
+  chapter_number: number;
+  story_title: string;
+  story_slug: string;
+}
+
 export type RestrictionType = "banned" | "comment" | "react";
 
 export interface AdminUser {
@@ -228,7 +237,7 @@ export const api = {
       followedTotal: number;
       followedPage: number;
       followedTotalPages: number;
-      recentComments: Comment[];
+      recentComments: ProfileComment[];
       commentsTotal: number;
       commentsPage: number;
       commentsTotalPages: number;
