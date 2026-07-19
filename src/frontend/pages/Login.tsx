@@ -176,7 +176,10 @@ export default function Login() {
             />
             <input
               type="text"
-              placeholder="Username (optional)"
+              placeholder="Username (optional, 3–9 characters)"
+              maxLength={9}
+              pattern="[A-Za-z0-9_]{3,9}"
+              title="3–9 characters: letters, numbers, or underscore"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />

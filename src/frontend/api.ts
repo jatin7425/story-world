@@ -46,6 +46,7 @@ export type AgeRating = "all" | "13+" | "16+" | "18+";
 export interface User {
   id: number;
   email: string;
+  username: string | null;
   display_name: string | null;
   role: "reader" | "author" | "admin";
   gender: Gender | null;

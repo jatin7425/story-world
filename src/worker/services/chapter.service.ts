@@ -44,8 +44,9 @@ export class ChapterService {
     // 18+ content is enforced server-side: it requires an account whose
     // set-once birthdate shows the reader is an adult. Milder ratings
     // (13+/16+) stay a client-side self-declared gate — requiring login for
-    // those would hurt growth more than the advisory is worth.
-    if (story.age_rating === "18+") {
+    // those would hurt growth more than the advisory is worth. Admins bypass
+    // the gate entirely — they have to review the content they're rating.
+    if (story.age_rating === "18+" && user?.role !== "admin") {
       if (!user) return { kind: "age_restricted", reason: "login_required" };
       const age = ageFromBirthdate(user.birthdate);
       if (age == null) return { kind: "age_restricted", reason: "birthdate_required" };

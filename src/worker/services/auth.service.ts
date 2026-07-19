@@ -62,6 +62,9 @@ export class AuthService {
     const gender = genderInput as Gender | null;
 
     if (input.username) {
+      if (!/^[A-Za-z0-9_]{3,9}$/.test(input.username)) {
+        return { error: "Username must be 3–9 characters: letters, numbers, or underscore", status: 400 };
+      }
       const taken = await this.users.findByUsername(input.username);
       if (taken) return { error: "Username is already taken", status: 409 };
     }

@@ -30,6 +30,7 @@ export function resolveAvatarUrl(gender: Gender | null, avatarGender: AvatarGend
 export interface AuthUserRow {
   id: number;
   email: string;
+  username: string | null;
   display_name: string | null;
   role: AuthUser["role"];
   gender: Gender | null;
@@ -42,6 +43,7 @@ export function toAuthUser(row: AuthUserRow): AuthUser {
   return {
     id: row.id,
     email: row.email,
+    username: row.username,
     display_name: row.display_name,
     role: row.role,
     gender: row.gender,

@@ -1194,6 +1194,41 @@ label {
   flex-shrink: 0;
 }
 
+.profile-email {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin: 0.1rem 0 0;
+  word-break: break-all;
+}
+.profile-dob {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin: 0.25rem 0 0;
+}
+.profile-dob-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+}
+.profile-dob-form label {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+}
+.profile-dob-form input[type="date"] {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.82rem;
+  width: auto;
+}
+.profile-dob-form button {
+  width: auto;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.82rem;
+}
+
 .gender-selector {
   margin-top: 0.35rem;
 }

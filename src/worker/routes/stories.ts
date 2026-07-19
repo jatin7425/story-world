@@ -12,11 +12,15 @@ storiesRoutes.get("/", async (c) => {
   // Age-filtered listing: a logged-in user's account birthdate wins; anonymous
   // readers send their self-declared age as ?viewer_age. Neither present →
   // unfiltered, so crawlers and first-time visitors see the whole catalog.
+  // Admins are never filtered — they need the full catalog to moderate it.
   const user = await getCurrentUser(c);
-  let viewerAge = ageFromBirthdate(user?.birthdate ?? null);
-  if (viewerAge == null) {
-    const param = Number(c.req.query("viewer_age"));
-    if (Number.isInteger(param) && param >= 0 && param <= 120) viewerAge = param;
+  let viewerAge: number | null = null;
+  if (user?.role !== "admin") {
+    viewerAge = ageFromBirthdate(user?.birthdate ?? null);
+    if (viewerAge == null) {
+      const param = Number(c.req.query("viewer_age"));
+      if (Number.isInteger(param) && param >= 0 && param <= 120) viewerAge = param;
+    }
   }
 
   const { items, total, totalPages } = await c

@@ -47,6 +47,8 @@ export function AgeVerificationProvider({ children }: { children: ReactNode }) {
 
   const statusFor = (rating: AgeRating | null): AgeGateStatus => {
     if (!rating || rating === "all") return "allowed";
+    // Admins bypass every gate — they review and rate this content.
+    if (user?.role === "admin") return "allowed";
     // 18+ is server-enforced: it needs an account with a set-once birthdate,
     // so an anonymous localStorage declaration doesn't count here. 13+/16+
     // are advisories where self-declaration (any source) is enough.

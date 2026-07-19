@@ -24,6 +24,7 @@ export type AvatarGender = "male" | "female";
 export interface AuthUser {
   id: number;
   email: string;
+  username: string | null;
   display_name: string | null;
   role: "reader" | "author" | "admin";
   gender: Gender | null;
