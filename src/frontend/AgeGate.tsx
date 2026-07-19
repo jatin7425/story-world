@@ -1,31 +1,45 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { AgeRating } from "./api";
-import { useAgeVerification } from "./AgeVerificationContext";
+import { useAgeVerification, type AgeGateStatus } from "./AgeVerificationContext";
 
 /**
- * Blocks rated content behind a self-declared birthdate prompt. Deliberately
- * asks for a date of birth rather than an "I am over N" checkbox: the reader
- * has to state an age without being told what answer unlocks the page, and
- * the answer sticks (localStorage + account), so an underage declaration
- * can't be retried with a different button click.
+ * Card shown in place of age-restricted content. Also rendered directly by
+ * Chapter.tsx when the server refuses 18+ content, so the client-side gate
+ * and the server-enforced one look identical to the reader.
  */
-export default function AgeGate({ rating, children }: { rating: AgeRating | null; children: ReactNode }) {
-  const { statusFor, declareBirthdate } = useAgeVerification();
+export function AgeRestrictionCard({
+  status,
+  rating,
+  onDeclared,
+}: {
+  status: Exclude<AgeGateStatus, "allowed">;
+  rating: AgeRating | null;
+  onDeclared?: () => void;
+}) {
+  const { declareBirthdate } = useAgeVerification();
   const [value, setValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const status = statusFor(rating);
-  if (status === "allowed") return <>{children}</>;
+  if (status === "login_required") {
+    return (
+      <div className="age-gate-card">
+        <div className="icon">🔞</div>
+        <h2>Adults only</h2>
+        <p>This content is rated 18+. Log in and confirm your date of birth to read it.</p>
+        <Link to="/login" className="btn">
+          Log in to continue
+        </Link>
+      </div>
+    );
+  }
 
   if (status === "underage") {
     return (
       <div className="age-gate-card">
         <div className="icon">🔞</div>
         <h2>This story isn't available for your age</h2>
-        <p>
-          This content is rated {rating} and can't be shown based on the date of birth you provided.
-        </p>
+        <p>This content is rated {rating} and can't be shown based on the date of birth you provided.</p>
         <Link to="/" className="btn btn-secondary">
           Browse other stories
         </Link>
@@ -33,12 +47,17 @@ export default function AgeGate({ rating, children }: { rating: AgeRating | null
     );
   }
 
+  // status === "unknown": ask for a date of birth. Deliberately a DOB prompt
+  // rather than an "I am over N" checkbox — the reader states an age without
+  // being told what answer unlocks the page, and the answer sticks
+  // (localStorage, plus set-once on the account when logged in).
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!value || submitting) return;
     setSubmitting(true);
     try {
       await declareBirthdate(value);
+      onDeclared?.();
     } finally {
       setSubmitting(false);
     }
@@ -65,4 +84,12 @@ export default function AgeGate({ rating, children }: { rating: AgeRating | null
       <p className="age-gate-note">We only use this to check content ratings. No documents needed.</p>
     </div>
   );
+}
+
+/** Blocks rated content until the viewer's (self-declared) age allows it. */
+export default function AgeGate({ rating, children }: { rating: AgeRating | null; children: ReactNode }) {
+  const { statusFor } = useAgeVerification();
+  const status = statusFor(rating);
+  if (status === "allowed") return <>{children}</>;
+  return <AgeRestrictionCard status={status} rating={rating} />;
 }

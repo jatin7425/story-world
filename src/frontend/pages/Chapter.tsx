@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api, ApiError, type AgeRating, type Chapter as ChapterType, type Comment } from "../api";
+import { api, ApiError, type AgeRating, type AgeRestrictedReason, type Chapter as ChapterType, type Comment } from "../api";
 import { useAuth } from "../AuthContext";
-import AgeGate from "../AgeGate";
+import AgeGate, { AgeRestrictionCard } from "../AgeGate";
 import Breadcrumbs from "../Breadcrumbs";
 import Pagination from "../Pagination";
 import { renderChapterContent } from "../markdown";
@@ -19,6 +19,8 @@ export default function Chapter() {
   const [commentsTotalPages, setCommentsTotalPages] = useState(1);
   const [newComment, setNewComment] = useState("");
   const [locked, setLocked] = useState(false);
+  const [ageRestricted, setAgeRestricted] = useState<AgeRestrictedReason | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [notFound, setNotFound] = useState(false);
   const [nextChapterNumber, setNextChapterNumber] = useState<number | null>(null);
   const [storyTitle, setStoryTitle] = useState<string | null>(null);
@@ -31,6 +33,7 @@ export default function Chapter() {
     if (!slug || !number) return;
     setLoading(true);
     setLocked(false);
+    setAgeRestricted(null);
     setNotFound(false);
     setChapter(null);
     setComments([]);
@@ -48,12 +51,13 @@ export default function Chapter() {
         setStoryAgeRating(r.storyAgeRating);
       })
       .catch((err) => {
-        if (err instanceof ApiError && err.locked) setLocked(true);
+        if (err instanceof ApiError && err.ageRestrictedReason) setAgeRestricted(err.ageRestrictedReason);
+        else if (err instanceof ApiError && err.locked) setLocked(true);
         else if (err instanceof ApiError && err.status === 404) setNotFound(true);
         else throw err;
       })
       .finally(() => setLoading(false));
-  }, [slug, number]);
+  }, [slug, number, reloadKey]);
 
   useEffect(() => {
     if (!chapter) return;
@@ -93,6 +97,16 @@ export default function Chapter() {
   };
 
   if (loading) return <p>Loading...</p>;
+
+  if (ageRestricted) {
+    return (
+      <AgeRestrictionCard
+        status={ageRestricted === "birthdate_required" ? "unknown" : ageRestricted}
+        rating="18+"
+        onDeclared={() => setReloadKey((k) => k + 1)}
+      />
+    );
+  }
 
   if (locked) {
     return (

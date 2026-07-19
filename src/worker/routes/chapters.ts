@@ -9,9 +9,15 @@ export const chapterActionsRoutes = new Hono<AppEnv>();
 chaptersRoutes.get("/:slug/chapters/:number", async (c) => {
   const user = await getCurrentUser(c);
   const number = Number(c.req.param("number"));
-  const result = await c.get("services").chapterService.getChapter(c.req.param("slug"), number, user?.id ?? null);
+  const result = await c.get("services").chapterService.getChapter(c.req.param("slug"), number, user);
 
   if (result.kind === "not_found") return c.json({ error: "Chapter not found" }, 404);
+  if (result.kind === "age_restricted") {
+    return c.json(
+      { error: "This chapter is age-restricted", ageRestricted: true, reason: result.reason },
+      result.reason === "login_required" ? 401 : 403
+    );
+  }
   if (result.kind === "locked") {
     return c.json(
       { error: "Login required to read this chapter", locked: true, chapterNumber: result.chapterNumber },

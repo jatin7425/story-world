@@ -1,12 +1,16 @@
 import { emitToast } from "./toastBus";
 
+export type AgeRestrictedReason = "login_required" | "birthdate_required" | "underage";
+
 export class ApiError extends Error {
   status: number;
   locked: boolean;
-  constructor(message: string, status: number, locked = false) {
+  ageRestrictedReason: AgeRestrictedReason | null;
+  constructor(message: string, status: number, locked = false, ageRestrictedReason: AgeRestrictedReason | null = null) {
     super(message);
     this.status = status;
     this.locked = locked;
+    this.ageRestrictedReason = ageRestrictedReason;
   }
 }
 
@@ -25,13 +29,13 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const body = data as { error?: string; locked?: boolean };
+    const body = data as { error?: string; locked?: boolean; ageRestricted?: boolean; reason?: AgeRestrictedReason };
     const message = body.error ?? `Request failed: ${res.status}`;
-    // "locked" (paywall gate) is expected flow control, not a real error —
-    // callers already render a dedicated UI for it, so a red toast on top
-    // would just be noise.
-    if (!body.locked) emitToast(message, "error");
-    throw new ApiError(message, res.status, !!body.locked);
+    // "locked" (paywall gate) and "ageRestricted" (18+ gate) are expected
+    // flow control, not real errors — callers already render a dedicated UI
+    // for them, so a red toast on top would just be noise.
+    if (!body.locked && !body.ageRestricted) emitToast(message, "error");
+    throw new ApiError(message, res.status, !!body.locked, body.ageRestricted ? (body.reason ?? "login_required") : null);
   }
   return data as T;
 }

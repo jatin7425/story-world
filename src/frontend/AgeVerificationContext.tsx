@@ -6,7 +6,7 @@ const STORAGE_KEY = "storyglobal-birthdate";
 
 const MIN_AGE: Record<AgeRating, number> = { all: 0, "13+": 13, "16+": 16, "18+": 18 };
 
-export type AgeGateStatus = "allowed" | "unknown" | "underage";
+export type AgeGateStatus = "allowed" | "unknown" | "underage" | "login_required";
 
 interface AgeVerificationState {
   birthdate: string | null;
@@ -47,6 +47,14 @@ export function AgeVerificationProvider({ children }: { children: ReactNode }) {
 
   const statusFor = (rating: AgeRating | null): AgeGateStatus => {
     if (!rating || rating === "all") return "allowed";
+    // 18+ is server-enforced: it needs an account with a set-once birthdate,
+    // so an anonymous localStorage declaration doesn't count here. 13+/16+
+    // are advisories where self-declaration (any source) is enough.
+    if (rating === "18+") {
+      if (!user) return "login_required";
+      if (!user.birthdate) return "unknown";
+      return ageFromBirthdate(user.birthdate) >= 18 ? "allowed" : "underage";
+    }
     if (!birthdate) return "unknown";
     return ageFromBirthdate(birthdate) >= MIN_AGE[rating] ? "allowed" : "underage";
   };
