@@ -1328,6 +1328,15 @@ label {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  min-width: 0;
+}
+/* The global `input` rule has no width, so inputs default to their intrinsic
+   ~20ch size and overflow the grid column — make them fill their cell. */
+.profile-field input,
+.profile-field select,
+.profile-field .password-input {
+  width: 100%;
+  min-width: 0;
 }
 .profile-field.full {
   grid-column: 1 / -1;
