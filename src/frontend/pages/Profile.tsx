@@ -23,8 +23,13 @@ const SECTIONS = [
   { id: "account", label: "Account" },
 ] as const;
 
-function formatDate(iso: string, opts: Intl.DateTimeFormatOptions) {
-  return new Date(iso.includes("T") ? iso : `${iso}T00:00:00`).toLocaleDateString(undefined, opts);
+/** Handles D1's "YYYY-MM-DD HH:MM:SS" (UTC), ISO strings, and bare dates. */
+function formatDate(value: string, opts: Intl.DateTimeFormatOptions) {
+  let normalized = value;
+  if (/^\d{4}-\d{2}-\d{2} /.test(value)) normalized = value.replace(" ", "T") + "Z";
+  else if (/^\d{4}-\d{2}-\d{2}$/.test(value)) normalized = `${value}T00:00:00`;
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(undefined, opts);
 }
 
 function ProfileDetailsCard({ user, onUpdated }: { user: User; onUpdated: (user: User) => void }) {
@@ -95,9 +100,7 @@ function ProfileDetailsCard({ user, onUpdated }: { user: User; onUpdated: (user:
           />
         </div>
         <div className="profile-field">
-          <label htmlFor="pf-username">
-            Username <span className="hint">· 3–9 chars, letters, numbers, _</span>
-          </label>
+          <label htmlFor="pf-username">Username</label>
           <input
             id="pf-username"
             type="text"
@@ -108,6 +111,7 @@ function ProfileDetailsCard({ user, onUpdated }: { user: User; onUpdated: (user:
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
+          <span className="field-note">3–9 characters: letters, numbers, underscore.</span>
         </div>
         <div className="profile-field">
           <label htmlFor="pf-email">Email</label>
@@ -308,7 +312,7 @@ export default function Profile() {
         <div className="profile-hero-inner">
           <img src={user.avatar_url} alt="" className="profile-avatar profile-avatar-hero" />
           <div className="profile-identity">
-            <h1>{user.display_name ?? user.username ?? user.email}</h1>
+            <h1>{user.display_name ?? user.username ?? user.email.split("@")[0]}</h1>
             {user.username && <div className="profile-handle">@{user.username}</div>}
             <p className="profile-email">{user.email}</p>
             <div className="profile-hero-meta">

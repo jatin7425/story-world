@@ -1351,7 +1351,7 @@ label {
   color: var(--text-muted);
 }
 .field-note.locked {
-  color: var(--accent);
+  color: var(--text-muted);
 }
 .profile-card-actions {
   display: flex;
