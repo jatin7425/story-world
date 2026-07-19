@@ -35,6 +35,7 @@ export interface AuthUserRow {
   gender: Gender | null;
   avatar_gender: AvatarGender;
   avatar_seed: number;
+  birthdate: string | null;
 }
 
 export function toAuthUser(row: AuthUserRow): AuthUser {
@@ -45,5 +46,6 @@ export function toAuthUser(row: AuthUserRow): AuthUser {
     role: row.role,
     gender: row.gender,
     avatar_url: resolveAvatarUrl(row.gender, row.avatar_gender, row.avatar_seed),
+    birthdate: row.birthdate,
   };
 }

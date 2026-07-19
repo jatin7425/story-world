@@ -2,14 +2,26 @@ import { Hono } from "hono";
 import type { AppEnv } from "../hono-env";
 import { getCurrentUser } from "../lib/current-user";
 import { parseReaderPagination } from "../lib/pagination";
+import { ageFromBirthdate } from "../lib/age";
 
 export const storiesRoutes = new Hono<AppEnv>();
 
 storiesRoutes.get("/", async (c) => {
   const { page = 1, limit = 10 } = parseReaderPagination(c);
+
+  // Age-filtered listing: a logged-in user's account birthdate wins; anonymous
+  // readers send their self-declared age as ?viewer_age. Neither present →
+  // unfiltered, so crawlers and first-time visitors see the whole catalog.
+  const user = await getCurrentUser(c);
+  let viewerAge = ageFromBirthdate(user?.birthdate ?? null);
+  if (viewerAge == null) {
+    const param = Number(c.req.query("viewer_age"));
+    if (Number.isInteger(param) && param >= 0 && param <= 120) viewerAge = param;
+  }
+
   const { items, total, totalPages } = await c
     .get("services")
-    .storyService.listStories(page, limit, c.req.query("q"));
+    .storyService.listStories(page, limit, c.req.query("q"), viewerAge);
   return c.json({ stories: items, total, page, limit, totalPages });
 });
 

@@ -83,6 +83,8 @@ export interface UserRow {
   gender: "male" | "female" | "other" | null;
   avatar_gender: "male" | "female";
   avatar_seed: number;
+  birthdate: string | null;
+  age_verified_at: string | null;
   created_at: string;
 }
 

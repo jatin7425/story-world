@@ -28,4 +28,5 @@ export interface AuthUser {
   role: "reader" | "author" | "admin";
   gender: Gender | null;
   avatar_url: string;
+  birthdate: string | null;
 }

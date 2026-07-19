@@ -2,7 +2,7 @@ import type { UserRow } from "./types";
 import type { AvatarGender, Gender } from "../types";
 
 const USER_COLUMNS =
-  "id, email, display_name, role, password_hash, username, mobile, gender, avatar_gender, avatar_seed, created_at";
+  "id, email, display_name, role, password_hash, username, mobile, gender, avatar_gender, avatar_seed, birthdate, age_verified_at, created_at";
 
 export interface CreatePasswordUserInput {
   email: string;
@@ -27,6 +27,7 @@ export interface IUsersRepository {
   createWithPassword(input: CreatePasswordUserInput): Promise<UserRow>;
   attachPassword(userId: number, input: CreatePasswordUserInput): Promise<UserRow>;
   updateGender(userId: number, gender: Gender | null, avatarSeed: number): Promise<UserRow>;
+  updateBirthdate(userId: number, birthdate: string): Promise<UserRow>;
   updatePassword(userId: number, passwordHash: string): Promise<UserRow>;
   listAll(limit: number, offset: number): Promise<UserPage>;
 }
@@ -107,6 +108,16 @@ export class UsersRepository implements IUsersRepository {
     const row = await this.db
       .prepare(`UPDATE users SET gender = ?, avatar_seed = ? WHERE id = ? RETURNING ${USER_COLUMNS}`)
       .bind(gender, avatarSeed, userId)
+      .first<UserRow>();
+    return row!;
+  }
+
+  async updateBirthdate(userId: number, birthdate: string): Promise<UserRow> {
+    const row = await this.db
+      .prepare(
+        `UPDATE users SET birthdate = ?, age_verified_at = datetime('now') WHERE id = ? RETURNING ${USER_COLUMNS}`
+      )
+      .bind(birthdate, userId)
       .first<UserRow>();
     return row!;
   }

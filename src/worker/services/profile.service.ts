@@ -36,6 +36,29 @@ export class ProfileService {
     };
   }
 
+  /**
+   * Self-declared age verification: birthdate is set once and never editable
+   * afterwards — otherwise an underage reader could simply re-declare an
+   * older date after being blocked from a rated story.
+   */
+  async updateBirthdate(userId: number, birthdate: string): Promise<AuthUser | { error: string }> {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(birthdate)) return { error: "Invalid birthdate format" };
+    const date = new Date(`${birthdate}T00:00:00Z`);
+    const now = new Date();
+    if (Number.isNaN(date.getTime()) || birthdate !== date.toISOString().slice(0, 10)) {
+      return { error: "Invalid birthdate" };
+    }
+    if (date > now) return { error: "Birthdate cannot be in the future" };
+    if (now.getUTCFullYear() - date.getUTCFullYear() > 120) return { error: "Invalid birthdate" };
+
+    const existing = await this.users.findById(userId);
+    if (!existing) return { error: "User not found" };
+    if (existing.birthdate) return { error: "Birthdate is already set and cannot be changed" };
+
+    const updated = await this.users.updateBirthdate(userId, birthdate);
+    return toAuthUser(updated);
+  }
+
   /** Re-rolls avatar_seed so the picture visibly changes, not just the gender bucket it's drawn from. */
   async updateGender(userId: number, gender: string | null): Promise<AuthUser | { error: string }> {
     if (gender !== null && !isGender(gender)) return { error: "Invalid gender value" };

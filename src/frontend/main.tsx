@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./AuthContext";
+import { AgeVerificationProvider } from "./AgeVerificationContext";
 import { ThemeProvider } from "./ThemeContext";
 import Root from "./Root";
 import ToastProvider from "./ToastProvider";
@@ -11,10 +12,12 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <ThemeProvider>
-          <Root />
-          <ToastProvider />
-        </ThemeProvider>
+        <AgeVerificationProvider>
+          <ThemeProvider>
+            <Root />
+            <ToastProvider />
+          </ThemeProvider>
+        </AgeVerificationProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>

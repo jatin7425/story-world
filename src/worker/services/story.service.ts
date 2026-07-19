@@ -18,11 +18,18 @@ export class StoryService {
     private readonly follows: IFollowsRepository
   ) {}
 
-  async listStories(page: number, limit: number, query?: string): Promise<Paginated<StoryRow>> {
+  async listStories(
+    page: number,
+    limit: number,
+    query?: string,
+    maxViewerAge?: number | null
+  ): Promise<Paginated<StoryRow>> {
     const words = tokenize(query);
     const offset = (page - 1) * limit;
     const { items, total } =
-      words.length > 0 ? await this.stories.search(words, limit, offset) : await this.stories.listPublished(limit, offset);
+      words.length > 0
+        ? await this.stories.search(words, limit, offset, maxViewerAge)
+        : await this.stories.listPublished(limit, offset, maxViewerAge);
     return toPaginated(items, total, page, limit);
   }
 

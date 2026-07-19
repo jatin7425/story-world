@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api, ApiError, type Chapter as ChapterType, type Comment } from "../api";
+import { api, ApiError, type AgeRating, type Chapter as ChapterType, type Comment } from "../api";
 import { useAuth } from "../AuthContext";
+import AgeGate from "../AgeGate";
 import Breadcrumbs from "../Breadcrumbs";
 import Pagination from "../Pagination";
 import { renderChapterContent } from "../markdown";
@@ -22,6 +23,7 @@ export default function Chapter() {
   const [nextChapterNumber, setNextChapterNumber] = useState<number | null>(null);
   const [storyTitle, setStoryTitle] = useState<string | null>(null);
   const [storyCoverImageUrl, setStoryCoverImageUrl] = useState<string | null>(null);
+  const [storyAgeRating, setStoryAgeRating] = useState<AgeRating | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -43,6 +45,7 @@ export default function Chapter() {
         setNextChapterNumber(r.nextChapterNumber);
         setStoryTitle(r.storyTitle);
         setStoryCoverImageUrl(r.storyCoverImageUrl);
+        setStoryAgeRating(r.storyAgeRating);
       })
       .catch((err) => {
         if (err instanceof ApiError && err.locked) setLocked(true);
@@ -110,80 +113,82 @@ export default function Chapter() {
   const heroImageUrl = chapter.image_url ?? storyCoverImageUrl;
 
   return (
-    <div className="chapter-page">
-      {heroImageUrl && (
-        <div
-          className="page-hero-bg"
-          style={{
-            backgroundImage: `linear-gradient(to bottom, transparent 0%, transparent 25%, var(--bg) 50%, var(--bg) 100%), url(${heroImageUrl})`,
-          }}
-        />
-      )}
-      <Breadcrumbs
-        items={[
-          { label: "Home", to: "/" },
-          { label: storyTitle ?? slug ?? "Story", to: `/stories/${slug}` },
-          { label: `Chapter ${chapter.chapter_number}` },
-        ]}
-      />
-      <h1>{formatChapterTitle(chapter.chapter_number, chapter.title)}</h1>
-      <div className="chapter-content">{renderChapterContent(chapter.content, chapter.content_format)}</div>
-
-      <div className="chapter-actions">
-        {user ? (
-          <button onClick={toggleLike}>
-            {likedByMe ? "♥" : "♡"} {likeCount}
-          </button>
-        ) : (
-          <span>♡ {likeCount}</span>
+    <AgeGate rating={storyAgeRating}>
+      <div className="chapter-page">
+        {heroImageUrl && (
+          <div
+            className="page-hero-bg"
+            style={{
+              backgroundImage: `linear-gradient(to bottom, transparent 0%, transparent 25%, var(--bg) 50%, var(--bg) 100%), url(${heroImageUrl})`,
+            }}
+          />
         )}
-      </div>
+        <Breadcrumbs
+          items={[
+            { label: "Home", to: "/" },
+            { label: storyTitle ?? slug ?? "Story", to: `/stories/${slug}` },
+            { label: `Chapter ${chapter.chapter_number}` },
+          ]}
+        />
+        <h1>{formatChapterTitle(chapter.chapter_number, chapter.title)}</h1>
+        <div className="chapter-content">{renderChapterContent(chapter.content, chapter.content_format)}</div>
 
-      {actionError && <p className="error">{actionError}</p>}
-
-      {(prevNumber || nextChapterNumber) && (
-        <div className="chapter-nav">
-          {prevNumber ? (
-            <Link to={`/stories/${slug}/chapters/${prevNumber}`} className="btn btn-secondary">
-              ← Previous
-            </Link>
+        <div className="chapter-actions">
+          {user ? (
+            <button onClick={toggleLike}>
+              {likedByMe ? "♥" : "♡"} {likeCount}
+            </button>
           ) : (
-            <span />
-          )}
-          {nextChapterNumber && (
-            <Link to={`/stories/${slug}/chapters/${nextChapterNumber}`} className="btn btn-secondary">
-              Next →
-            </Link>
+            <span>♡ {likeCount}</span>
           )}
         </div>
-      )}
 
-      <section className="comments">
-        <h2>Comments</h2>
-        {comments.map((c) => (
-          <div key={c.id} className="comment">
-            <strong>{c.display_name ?? c.email}</strong>
-            <p>{c.body}</p>
+        {actionError && <p className="error">{actionError}</p>}
+
+        {(prevNumber || nextChapterNumber) && (
+          <div className="chapter-nav">
+            {prevNumber ? (
+              <Link to={`/stories/${slug}/chapters/${prevNumber}`} className="btn btn-secondary">
+                ← Previous
+              </Link>
+            ) : (
+              <span />
+            )}
+            {nextChapterNumber && (
+              <Link to={`/stories/${slug}/chapters/${nextChapterNumber}`} className="btn btn-secondary">
+                Next →
+              </Link>
+            )}
           </div>
-        ))}
-
-        <Pagination page={commentsPage} totalPages={commentsTotalPages} onChange={setCommentsPage} />
-
-        {user ? (
-          <div className="comment-form">
-            <textarea
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Add a comment..."
-            />
-            <button onClick={submitComment}>Post</button>
-          </div>
-        ) : (
-          <p>
-            <Link to="/login">Log in</Link> to comment.
-          </p>
         )}
-      </section>
-    </div>
+
+        <section className="comments">
+          <h2>Comments</h2>
+          {comments.map((c) => (
+            <div key={c.id} className="comment">
+              <strong>{c.display_name ?? c.email}</strong>
+              <p>{c.body}</p>
+            </div>
+          ))}
+
+          <Pagination page={commentsPage} totalPages={commentsTotalPages} onChange={setCommentsPage} />
+
+          {user ? (
+            <div className="comment-form">
+              <textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Add a comment..."
+              />
+              <button onClick={submitComment}>Post</button>
+            </div>
+          ) : (
+            <p>
+              <Link to="/login">Log in</Link> to comment.
+            </p>
+          )}
+        </section>
+      </div>
+    </AgeGate>
   );
 }

@@ -2,7 +2,7 @@ import type { IStoriesRepository } from "../repositories/stories.repository";
 import type { IChaptersRepository } from "../repositories/chapters.repository";
 import type { ILikesRepository } from "../repositories/likes.repository";
 import type { IRestrictionsRepository } from "../repositories/restrictions.repository";
-import type { ChapterRow } from "../repositories/types";
+import type { AgeRating, ChapterRow } from "../repositories/types";
 
 export type ChapterResult =
   | { kind: "not_found" }
@@ -12,6 +12,7 @@ export type ChapterResult =
       chapter: ChapterRow;
       storyTitle: string;
       storyCoverImageUrl: string | null;
+      storyAgeRating: AgeRating | null;
       likeCount: number;
       likedByMe: boolean;
       nextChapterNumber: number | null;
@@ -52,6 +53,7 @@ export class ChapterService {
       chapter,
       storyTitle: story.title,
       storyCoverImageUrl: story.cover_image_url,
+      storyAgeRating: story.age_rating,
       likeCount,
       likedByMe,
       nextChapterNumber,

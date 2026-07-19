@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, type ChapterSummary, type Story as StoryType } from "../api";
 import { useAuth } from "../AuthContext";
+import AgeGate from "../AgeGate";
 import Breadcrumbs from "../Breadcrumbs";
 import Pagination from "../Pagination";
 import { formatChapterTitle } from "../chapterTitle";
@@ -64,76 +65,78 @@ export default function Story() {
     : [];
 
   return (
-    <div className="story-page">
-      {story.cover_image_url && (
-        <div
-          className="page-hero-bg"
-          style={{
-            backgroundImage: `linear-gradient(to bottom, transparent 0%, transparent 25%, var(--bg) 50%, var(--bg) 100%), url(${story.cover_image_url})`,
-          }}
-        />
-      )}
-      <Breadcrumbs items={[{ label: "Home", to: "/" }, { label: story.title }]} />
-
-      <div className={story.cover_image_url ? "story-banner" : "story-banner no-cover"}>
+    <AgeGate rating={story.age_rating}>
+      <div className="story-page">
         {story.cover_image_url && (
-          <div className="cover">
-            <img src={story.cover_image_url} alt="" />
-          </div>
+          <div
+            className="page-hero-bg"
+            style={{
+              backgroundImage: `linear-gradient(to bottom, transparent 0%, transparent 25%, var(--bg) 50%, var(--bg) 100%), url(${story.cover_image_url})`,
+            }}
+          />
         )}
-        <h1>{story.title}</h1>
-        {story.age_rating && <span className={`age-rating-badge age-rating-${story.age_rating.replace("+", "plus")}`}>{story.age_rating}</span>}
-        {tagList.length > 0 && (
-          <div className="story-tags">
-            {tagList.map((tag) => (
-              <span key={tag} className="tag-chip">
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-        <div className="story-banner-body">
-          {story.description && (
-            <div className={descExpanded ? "description-box expanded" : "description-box"}>
-              <p className="description">{story.description}</p>
-              <button type="button" className="desc-toggle" onClick={() => setDescExpanded((v) => !v)}>
-                {descExpanded ? "See less" : "See more"}
-              </button>
+        <Breadcrumbs items={[{ label: "Home", to: "/" }, { label: story.title }]} />
+
+        <div className={story.cover_image_url ? "story-banner" : "story-banner no-cover"}>
+          {story.cover_image_url && (
+            <div className="cover">
+              <img src={story.cover_image_url} alt="" />
             </div>
           )}
-          <p className="meta">
-            {followersCount} following · {chaptersTotal} chapter{chaptersTotal === 1 ? "" : "s"}
-          </p>
-          <div className="story-actions">
-            {user ? (
-              <button className={isFollowing ? "btn-secondary" : ""} onClick={toggleFollow}>
-                {isFollowing ? "Following ✓" : "+ Follow"}
-              </button>
-            ) : (
-              <Link to="/login" className="btn btn-secondary">
-                Log in to follow
-              </Link>
+          <h1>{story.title}</h1>
+          {story.age_rating && <span className={`age-rating-badge age-rating-${story.age_rating.replace("+", "plus")}`}>{story.age_rating}</span>}
+          {tagList.length > 0 && (
+            <div className="story-tags">
+              {tagList.map((tag) => (
+                <span key={tag} className="tag-chip">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="story-banner-body">
+            {story.description && (
+              <div className={descExpanded ? "description-box expanded" : "description-box"}>
+                <p className="description">{story.description}</p>
+                <button type="button" className="desc-toggle" onClick={() => setDescExpanded((v) => !v)}>
+                  {descExpanded ? "See less" : "See more"}
+                </button>
+              </div>
             )}
+            <p className="meta">
+              {followersCount} following · {chaptersTotal} chapter{chaptersTotal === 1 ? "" : "s"}
+            </p>
+            <div className="story-actions">
+              {user ? (
+                <button className={isFollowing ? "btn-secondary" : ""} onClick={toggleFollow}>
+                  {isFollowing ? "Following ✓" : "+ Follow"}
+                </button>
+              ) : (
+                <Link to="/login" className="btn btn-secondary">
+                  Log in to follow
+                </Link>
+              )}
+            </div>
           </div>
         </div>
+
+        <h2 className="section-heading">Chapters</h2>
+        <ol className="chapter-list">
+          {chapters.map((ch) => {
+            const isFree = ch.chapter_number <= story.free_chapter_count;
+            return (
+              <li key={ch.id}>
+                <Link to={`/stories/${story.slug}/chapters/${ch.chapter_number}`}>
+                  <span>{formatChapterTitle(ch.chapter_number, ch.title)}</span>
+                  {!isFree && !user && <span className="locked-badge">🔒 Login required</span>}
+                </Link>
+              </li>
+            );
+          })}
+        </ol>
+
+        <Pagination page={chapterPage} totalPages={chapterTotalPages} onChange={setChapterPage} />
       </div>
-
-      <h2 className="section-heading">Chapters</h2>
-      <ol className="chapter-list">
-        {chapters.map((ch) => {
-          const isFree = ch.chapter_number <= story.free_chapter_count;
-          return (
-            <li key={ch.id}>
-              <Link to={`/stories/${story.slug}/chapters/${ch.chapter_number}`}>
-                <span>{formatChapterTitle(ch.chapter_number, ch.title)}</span>
-                {!isFree && !user && <span className="locked-badge">🔒 Login required</span>}
-              </Link>
-            </li>
-          );
-        })}
-      </ol>
-
-      <Pagination page={chapterPage} totalPages={chapterTotalPages} onChange={setChapterPage} />
-    </div>
+    </AgeGate>
   );
 }

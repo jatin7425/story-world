@@ -30,7 +30,7 @@ export interface StoryPage {
 }
 
 export interface IStoriesRepository {
-  listPublished(limit: number, offset: number): Promise<StoryPage>;
+  listPublished(limit: number, offset: number, maxViewerAge?: number | null): Promise<StoryPage>;
   listAllForAdmin(limit: number, offset: number): Promise<StoryPage>;
   findPublishedBySlug(slug: string): Promise<StoryRow | null>;
   /** No status filter — admin/MCP use, where drafts must still be reachable. */
@@ -40,20 +40,34 @@ export interface IStoriesRepository {
   update(id: number, patch: UpdateStoryInput): Promise<StoryRow | null>;
   delete(id: number): Promise<void>;
   /** Word-wise match across title/description/tags — every word in the query must appear somewhere. */
-  search(words: string[], limit: number, offset: number): Promise<StoryPage>;
+  search(words: string[], limit: number, offset: number, maxViewerAge?: number | null): Promise<StoryPage>;
   updateAgeRating(id: number, ageRating: string, reason: string | null, source: "ai" | "admin"): Promise<StoryRow | null>;
 }
+
+// Hides stories rated above what the viewer's declared age allows. Ratings
+// are 'all'/'13+'/'16+'/'18+', so stripping the '+' yields the minimum age.
+// A null viewer age means "unknown" and filters nothing — first-time visitors
+// and search crawlers must still see the full catalog; the reader-facing age
+// gate handles them at the story page instead.
+const AGE_FILTER = `(age_rating IS NULL OR age_rating = 'all' OR CAST(REPLACE(age_rating, '+', '') AS INTEGER) <= ?)`;
 
 export class StoriesRepository implements IStoriesRepository {
   constructor(private readonly db: D1Database) {}
 
-  async listPublished(limit: number, offset: number): Promise<StoryPage> {
+  async listPublished(limit: number, offset: number, maxViewerAge?: number | null): Promise<StoryPage> {
+    const ageClause = maxViewerAge != null ? ` AND ${AGE_FILTER}` : "";
+    const ageValues = maxViewerAge != null ? [maxViewerAge] : [];
     const [{ results }, countRow] = await Promise.all([
       this.db
-        .prepare(`SELECT ${STORY_COLUMNS} FROM stories WHERE status = 'published' ORDER BY created_at DESC LIMIT ? OFFSET ?`)
-        .bind(limit, offset)
+        .prepare(
+          `SELECT ${STORY_COLUMNS} FROM stories WHERE status = 'published'${ageClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`
+        )
+        .bind(...ageValues, limit, offset)
         .all<StoryRow>(),
-      this.db.prepare("SELECT COUNT(*) as count FROM stories WHERE status = 'published'").first<{ count: number }>(),
+      this.db
+        .prepare(`SELECT COUNT(*) as count FROM stories WHERE status = 'published'${ageClause}`)
+        .bind(...ageValues)
+        .first<{ count: number }>(),
     ]);
     return { items: results, total: countRow?.count ?? 0 };
   }
@@ -151,19 +165,23 @@ export class StoriesRepository implements IStoriesRepository {
     await this.db.prepare("DELETE FROM stories WHERE id = ?").bind(id).run();
   }
 
-  async search(words: string[], limit: number, offset: number): Promise<StoryPage> {
-    if (words.length === 0) return this.listPublished(limit, offset);
+  async search(words: string[], limit: number, offset: number, maxViewerAge?: number | null): Promise<StoryPage> {
+    if (words.length === 0) return this.listPublished(limit, offset, maxViewerAge);
 
     const escapeLike = (s: string) => s.replace(/[%_\\]/g, (c) => `\\${c}`);
     const conditions = words
       .map(() => `(title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\')`)
       .join(" AND ");
-    const values = words.flatMap((w) => {
+    const values: (string | number)[] = words.flatMap((w) => {
       const pattern = `%${escapeLike(w)}%`;
       return [pattern, pattern, pattern];
     });
 
-    const whereClause = `status = 'published' AND (${conditions})`;
+    let whereClause = `status = 'published' AND (${conditions})`;
+    if (maxViewerAge != null) {
+      whereClause += ` AND ${AGE_FILTER}`;
+      values.push(maxViewerAge);
+    }
     const [{ results }, countRow] = await Promise.all([
       this.db
         .prepare(`SELECT ${STORY_COLUMNS} FROM stories WHERE ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`)

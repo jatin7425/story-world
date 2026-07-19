@@ -35,6 +35,18 @@ profileRoutes.patch("/gender", async (c) => {
   return c.json({ user: result });
 });
 
+profileRoutes.patch("/birthdate", async (c) => {
+  const user = await getCurrentUser(c);
+  if (!user) return c.json({ error: "Login required" }, 401);
+
+  const { birthdate } = await c.req.json<{ birthdate?: string }>();
+  if (!birthdate) return c.json({ error: "Birthdate required" }, 400);
+
+  const result = await c.get("services").profileService.updateBirthdate(user.id, birthdate);
+  if ("error" in result) return c.json(result, 400);
+  return c.json({ user: result });
+});
+
 profileRoutes.patch("/password", async (c) => {
   const user = await getCurrentUser(c);
   if (!user) return c.json({ error: "Login required" }, 401);

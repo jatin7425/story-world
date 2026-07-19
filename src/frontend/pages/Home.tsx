@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Story } from "../api";
+import { ageFromBirthdate, useAgeVerification } from "../AgeVerificationContext";
 import Pagination from "../Pagination";
 
 export default function Home() {
+  const { birthdate } = useAgeVerification();
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -16,7 +18,7 @@ export default function Home() {
     setLoading(true);
     const handle = setTimeout(() => {
       api
-        .listStories(query.trim() || undefined, page)
+        .listStories(query.trim() || undefined, page, birthdate ? ageFromBirthdate(birthdate) : null)
         .then((r) => {
           setStories(r.stories);
           setTotalPages(r.totalPages);
@@ -24,7 +26,7 @@ export default function Home() {
         .finally(() => setLoading(false));
     }, 250);
     return () => clearTimeout(handle);
-  }, [query, page]);
+  }, [query, page, birthdate]);
 
   return (
     <>

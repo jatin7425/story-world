@@ -46,6 +46,7 @@ export interface User {
   role: "reader" | "author" | "admin";
   gender: Gender | null;
   avatar_url: string;
+  birthdate: string | null;
 }
 
 export interface Story {
@@ -177,8 +178,8 @@ export const api = {
   login: (email: string, password: string) =>
     request<{ user: User }>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
 
-  listStories: (query?: string, page?: number) =>
-    request<{ stories: Story[] } & PageMeta>(`/api/stories${qs({ q: query, page })}`),
+  listStories: (query?: string, page?: number, viewerAge?: number | null) =>
+    request<{ stories: Story[] } & PageMeta>(`/api/stories${qs({ q: query, page, viewer_age: viewerAge ?? undefined })}`),
   getStory: (slug: string, chapterPage?: number) =>
     request<{
       story: Story;
@@ -198,6 +199,7 @@ export const api = {
       chapter: Chapter;
       storyTitle: string;
       storyCoverImageUrl: string | null;
+      storyAgeRating: AgeRating | null;
       likeCount: number;
       likedByMe: boolean;
       nextChapterNumber: number | null;
@@ -228,6 +230,8 @@ export const api = {
     }>(`/api/profile${qs({ followed_page: followedPage, comments_page: commentsPage })}`),
   updateGender: (gender: Gender | null) =>
     request<{ user: User }>("/api/profile/gender", { method: "PATCH", body: JSON.stringify({ gender }) }),
+  updateBirthdate: (birthdate: string) =>
+    request<{ user: User }>("/api/profile/birthdate", { method: "PATCH", body: JSON.stringify({ birthdate }) }),
   changePassword: (currentPassword: string, newPassword: string) =>
     request<{ ok: true }>("/api/profile/password", {
       method: "PATCH",

@@ -20,7 +20,7 @@ export class SessionsRepository implements ISessionsRepository {
   async findActiveUserByToken(token: string): Promise<AuthUser | null> {
     const row = await this.db
       .prepare(
-        `SELECT u.id, u.email, u.display_name, u.role, u.gender, u.avatar_gender, u.avatar_seed
+        `SELECT u.id, u.email, u.display_name, u.role, u.gender, u.avatar_gender, u.avatar_seed, u.birthdate
          FROM sessions s JOIN users u ON u.id = s.user_id
          WHERE s.token = ? AND s.expires_at > CURRENT_TIMESTAMP`
       )
